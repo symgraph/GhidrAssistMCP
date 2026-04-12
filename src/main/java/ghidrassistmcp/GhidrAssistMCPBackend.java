@@ -34,6 +34,8 @@ import ghidrassistmcp.tools.CancelTaskTool;
 import ghidrassistmcp.tools.ClassTool;
 import ghidrassistmcp.tools.CommentsTool;
 import ghidrassistmcp.tools.CreateDataVarTool;
+import ghidrassistmcp.tools.CreateFunctionTool;
+import ghidrassistmcp.tools.DisassembleAtTool;
 import ghidrassistmcp.tools.GetBasicBlocksTool;
 import ghidrassistmcp.tools.ImportFileTool;
 import ghidrassistmcp.tools.OpenProgramTool;
@@ -139,6 +141,8 @@ public class GhidrAssistMCPBackend implements McpBackend {
         registerTool(new GetFunctionStackLayoutTool());
         registerTool(new SearchStringsTool());
         registerTool(new CreateDataVarTool());
+        registerTool(new CreateFunctionTool());       // create_function
+        registerTool(new DisassembleAtTool());         // disassemble_at
         registerTool(new GetEntryPointsTool());
 
         // Register project-level tools
