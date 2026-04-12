@@ -35,6 +35,8 @@ import ghidrassistmcp.tools.ClassTool;
 import ghidrassistmcp.tools.CommentsTool;
 import ghidrassistmcp.tools.CreateDataVarTool;
 import ghidrassistmcp.tools.GetBasicBlocksTool;
+import ghidrassistmcp.tools.ImportFileTool;
+import ghidrassistmcp.tools.OpenProgramTool;
 import ghidrassistmcp.tools.GetCodeTool;
 import ghidrassistmcp.tools.GetCurrentAddressTool;
 import ghidrassistmcp.tools.GetCurrentFunctionTool;
@@ -138,6 +140,13 @@ public class GhidrAssistMCPBackend implements McpBackend {
         registerTool(new SearchStringsTool());
         registerTool(new CreateDataVarTool());
         registerTool(new GetEntryPointsTool());
+
+        // Register project-level tools
+        registerTool(new OpenProgramTool());          // open_program: open/list project files in CodeBrowser
+
+        // Register tools that are disabled by default (security-sensitive)
+        registerTool(new ImportFileTool());
+        toolEnabledStates.put("import_file", false); // disabled by default: exposes host file-system read access
 
         // Register async task management tools
         registerTool(new GetTaskStatusTool());
