@@ -51,8 +51,7 @@ public class PatchBytesTool implements McpTool {
                     "type", "string",
                     "description", "Address to patch (e.g. '0x401000' or '401000')"),
                 "bytes", Map.of(
-                    "type", "string",
-                    "description", "Hex bytes to write. Separators allowed: spaces/commas. Example: '90 90'"),
+                    "description", "Bytes to write. Either a hex string (e.g. '90 90') or an integer array (e.g. [144, 144])."),
                 "clear_code_units", Map.of(
                     "type", "boolean",
                     "description", "If true, clear existing instructions/data at the patched range before writing. Default: false")
@@ -67,30 +66,24 @@ public class PatchBytesTool implements McpTool {
         }
 
         String addressStr = (String) arguments.get("address");
-        String bytesStr = (String) arguments.get("bytes");
+        Object bytesObj = arguments.get("bytes");
         boolean clearCodeUnits = Boolean.TRUE.equals(arguments.get("clear_code_units"));
 
         if (addressStr == null || addressStr.isBlank()) {
             return textResult("address is required");
         }
-        if (bytesStr == null || bytesStr.isBlank()) {
+        if (bytesObj == null) {
             return textResult("bytes is required");
         }
 
-        Address address;
-        try {
-            address = currentProgram.getAddressFactory().getAddress(addressStr);
-        } catch (Exception e) {
-            return textResult("Invalid address: " + addressStr);
-        }
-
+        Address address = parseAddress(currentProgram, addressStr);
         if (address == null) {
             return textResult("Could not parse address: " + addressStr);
         }
 
         byte[] patchBytes;
         try {
-            patchBytes = parseHexBytes(bytesStr);
+            patchBytes = parsePatchBytes(bytesObj);
         } catch (IllegalArgumentException e) {
             return textResult("Invalid bytes format: " + e.getMessage());
         }
@@ -141,6 +134,53 @@ public class PatchBytesTool implements McpTool {
         }
 
         return textResult(sb.toString());
+    }
+
+    private static Address parseAddress(Program program, String addressStr) {
+        try {
+            Address parsed = program.getAddressFactory().getAddress(addressStr);
+            if (parsed != null) {
+                return parsed;
+            }
+        } catch (Exception ignored) {
+            // Fall through to numeric parse
+        }
+
+        try {
+            String clean = addressStr.strip();
+            if (clean.startsWith("0x") || clean.startsWith("0X")) {
+                clean = clean.substring(2);
+            }
+            long value = Long.parseUnsignedLong(clean, 16);
+            return program.getAddressFactory().getDefaultAddressSpace().getAddress(value);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static byte[] parsePatchBytes(Object input) {
+        if (input instanceof String) {
+            return parseHexBytes((String) input);
+        }
+
+        if (input instanceof List<?>) {
+            List<?> list = (List<?>) input;
+            byte[] out = new byte[list.size()];
+            for (int i = 0; i < list.size(); i++) {
+                Object item = list.get(i);
+                if (!(item instanceof Number)) {
+                    throw new IllegalArgumentException("array element at index " + i + " is not a number");
+                }
+                int value = ((Number) item).intValue();
+                if (value < 0 || value > 255) {
+                    throw new IllegalArgumentException("array element at index " + i + " out of range (0-255): " + value);
+                }
+                out[i] = (byte) value;
+            }
+            return out;
+        }
+
+        throw new IllegalArgumentException("bytes must be a hex string or integer array");
     }
 
     private static byte[] parseHexBytes(String input) {

@@ -114,7 +114,9 @@ GhidrAssistMCP provides 37 tools organized into categories. Several tools use an
 | `get_binary_info` | Get basic program information (name, architecture, compiler, etc.) |
 | `list_binaries` | List all open programs across all CodeBrowser windows |
 | `patch_bytes` | Patch raw bytes in program memory at a given address |
-| `export_program` | Export the current program to disk (`binary` or `original_file`) |
+| `export_program` | Export the current program to disk (`binary` or `original_file`) *(disabled by default)* |
+
+> **Security-sensitive tools:** `import_file` and `export_program` are disabled by default because they interact with the host filesystem. Enable them explicitly in the plugin configuration UI when needed.
 
 ### Function Discovery & Analysis
 

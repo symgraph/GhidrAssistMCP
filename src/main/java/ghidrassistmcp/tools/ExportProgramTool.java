@@ -30,7 +30,8 @@ public class ExportProgramTool implements McpTool {
     @Override
     public String getDescription() {
         return "Export the program to disk. Supports format 'binary' (raw bytes) or 'original_file'. " +
-               "Use after patching bytes to write a modified binary.";
+               "Use after patching bytes to write a modified binary. " +
+               "SECURITY: This tool writes to the host filesystem and is disabled by default.";
     }
 
     @Override
@@ -81,6 +82,7 @@ public class ExportProgramTool implements McpTool {
         if (format == null || format.isBlank()) {
             format = "binary";
         }
+        format = format.toLowerCase();
 
         boolean overwrite = Boolean.TRUE.equals(arguments.get("overwrite"));
 
@@ -95,7 +97,7 @@ public class ExportProgramTool implements McpTool {
         }
 
         Exporter exporter;
-        switch (format.toLowerCase()) {
+        switch (format) {
             case "binary":
                 exporter = new BinaryExporter();
                 break;
