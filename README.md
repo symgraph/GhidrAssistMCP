@@ -10,7 +10,7 @@ GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's co
 
 - **MCP Server Integration**: Full Model Context Protocol server implementation using official SDK
 - **Dual HTTP Transports**: Supports SSE and Streamable HTTP transports for maximum client compatibility
-- **35 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
+- **37 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
 - **6 MCP Resources**: Static data resources for program info, functions, strings, imports, exports, and segments
 - **7 MCP Prompts**: Pre-built analysis prompts for common reverse engineering tasks
 - **Result Caching**: Intelligent caching system to improve performance for repeated queries
@@ -98,14 +98,14 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 The Configuration tab allows you to:
 
-- **View all available tools** (35 total)
+- **View all available tools** (37 total)
 - **Enable/disable individual tools** using checkboxes
 - **Save configuration** to persist across sessions
 - **Monitor tool status** in real-time
 
 ## Available Tools
 
-GhidrAssistMCP provides 35 tools organized into categories. Several tools use an action-based API pattern where a single tool provides multiple related operations.
+GhidrAssistMCP provides 37 tools organized into categories. Several tools use an action-based API pattern where a single tool provides multiple related operations.
 
 ### Binary & Program Management
 
@@ -113,6 +113,10 @@ GhidrAssistMCP provides 35 tools organized into categories. Several tools use an
 | ---- | ----------- |
 | `get_binary_info` | Get basic program information (name, architecture, compiler, etc.) |
 | `list_binaries` | List all open programs across all CodeBrowser windows |
+| `patch_bytes` | Patch raw bytes in program memory at a given address |
+| `export_program` | Export the current program to disk (`binary` or `original_file`) *(disabled by default)* |
+
+> **Security-sensitive tools:** `import_file` and `export_program` are disabled by default because they interact with the host filesystem. Enable them explicitly in the plugin configuration UI when needed.
 
 ### Function Discovery & Analysis
 
