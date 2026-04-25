@@ -29,6 +29,7 @@ import ghidrassistmcp.resources.ProgramInfoResource;
 import ghidrassistmcp.resources.StringsResource;
 import ghidrassistmcp.tasks.McpTask;
 import ghidrassistmcp.tasks.McpTaskManager;
+import ghidrassistmcp.tools.AssembleCodeTool;
 import ghidrassistmcp.tools.BookmarksTool;
 import ghidrassistmcp.tools.CancelTaskTool;
 import ghidrassistmcp.tools.ClassTool;
@@ -149,6 +150,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
         // Register project-level tools
         registerTool(new OpenProgramTool());          // open_program: open/list project files in CodeBrowser
+        registerTool(new AssembleCodeTool());         // assemble_code: assemble instructions and optionally patch bytes
         registerTool(new PatchBytesTool());           // patch_bytes: write patched bytes into program memory
 
         // Register tools that are disabled by default (security-sensitive)

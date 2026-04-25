@@ -10,7 +10,7 @@ GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's co
 
 - **MCP Server Integration**: Full Model Context Protocol server implementation using official SDK
 - **Dual HTTP Transports**: Supports SSE and Streamable HTTP transports for maximum client compatibility
-- **37 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
+- **38 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
 - **6 MCP Resources**: Static data resources for program info, functions, strings, imports, exports, and segments
 - **7 MCP Prompts**: Pre-built analysis prompts for common reverse engineering tasks
 - **Result Caching**: Intelligent caching system to improve performance for repeated queries
@@ -98,14 +98,14 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 The Configuration tab allows you to:
 
-- **View all available tools** (37 total)
+- **View all available tools** (38 total)
 - **Enable/disable individual tools** using checkboxes
 - **Save configuration** to persist across sessions
 - **Monitor tool status** in real-time
 
 ## Available Tools
 
-GhidrAssistMCP provides 37 tools organized into categories. Several tools use an action-based API pattern where a single tool provides multiple related operations.
+GhidrAssistMCP provides 38 tools organized into categories. Several tools use an action-based API pattern where a single tool provides multiple related operations.
 
 ### Binary & Program Management
 
@@ -113,6 +113,7 @@ GhidrAssistMCP provides 37 tools organized into categories. Several tools use an
 | ---- | ----------- |
 | `get_binary_info` | Get basic program information (name, architecture, compiler, etc.) |
 | `list_binaries` | List all open programs across all CodeBrowser windows |
+| `assemble_code` | Assemble instruction text at an address and optionally patch it into program memory |
 | `patch_bytes` | Patch raw bytes in program memory at a given address |
 | `export_program` | Export the current program to disk (`binary` or `original_file`) *(disabled by default)* |
 
@@ -585,7 +586,7 @@ src/main/java/ghidrassistmcp/
 ├── tasks/                         # Async task system
 ├── resources/                     # MCP resources
 ├── prompts/                       # MCP prompts
-└── tools/                         # Tool implementations (35 files)
+└── tools/                         # Tool implementations
 ```
 
 ### Adding New Tools
