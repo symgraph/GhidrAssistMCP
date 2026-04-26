@@ -103,6 +103,55 @@ The Configuration tab allows you to:
 - **Save configuration** to persist across sessions
 - **Monitor tool status** in real-time
 
+## Headless Mode Quickstart
+
+GhidrAssistMCP can also be started from Ghidra's `analyzeHeadless` launcher. This is useful when you want MCP access to a program loaded in headless Ghidra without opening the CodeBrowser UI.
+
+First, build and install the extension so Ghidra can load the compiled classes and bundled dependencies:
+
+```bash
+cd /path/to/GhidrAssistMCP
+
+export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.0_PUBLIC
+gradle installExtension
+```
+
+Set paths for your Ghidra install and extracted user extension. On Linux, Ghidra user extensions usually live under `~/.config/ghidra/<ghidra_profile>/Extensions`:
+
+```bash
+export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.0_PUBLIC
+export GHIDRA_USER_EXTENSIONS_DIR="$HOME/.config/ghidra/ghidra_12.0_PUBLIC/Extensions"
+export GHIDRASSISTMCP_EXT="$GHIDRA_USER_EXTENSIONS_DIR/GhidrAssistMCP"
+```
+
+Import a binary and start the MCP server as a headless pre-script:
+
+```bash
+"$GHIDRA_INSTALL_DIR/support/analyzeHeadless" /tmp/ghidra-projects McpHeadless \
+  -import /path/to/binary \
+  -scriptPath "$GHIDRASSISTMCP_EXT/ghidra_scripts" \
+  -preScript GAMCPStartServerScript.java "host=127.0.0.1" "port=8080"
+```
+
+For a binary that is already imported into the project, use `-process` instead:
+
+```bash
+"$GHIDRA_INSTALL_DIR/support/analyzeHeadless" /tmp/ghidra-projects McpHeadless \
+  -process binary_name \
+  -scriptPath "$GHIDRASSISTMCP_EXT/ghidra_scripts" \
+  -preScript GAMCPStartServerScript.java "host=127.0.0.1" "port=8080"
+```
+
+MCP clients can connect to:
+
+```text
+SSE:             http://127.0.0.1:8080/sse
+SSE messages:    http://127.0.0.1:8080/message
+Streamable HTTP: http://127.0.0.1:8080/mcp
+```
+
+The headless MCP server runs inside the `analyzeHeadless` JVM and uses the loaded `currentProgram`. Keep that process alive while clients are connected; when `analyzeHeadless` exits, the MCP server exits with it.
+
 ## Available Tools
 
 GhidrAssistMCP provides 38 tools organized into categories. Several tools use an action-based API pattern where a single tool provides multiple related operations.
