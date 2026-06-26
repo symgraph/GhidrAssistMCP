@@ -35,8 +35,8 @@ public class OpenProgramTool implements McpTool {
     public String getDescription() {
         return "Open a program from the Ghidra project in CodeBrowser, or list all " +
                "programs available in the project. " +
-               "Use action 'list' to see all project files, or 'open' to open one by name. " +
-               "Example: {\"action\": \"open\", \"name\": \"bank00.bin\"}";
+               "Use action 'list' to see all project files, or 'open' to open one by name or full path. " +
+               "Example: {\"action\": \"open\", \"name\": \"/banks/bank00.bin\"}";
     }
 
     @Override
@@ -60,7 +60,7 @@ public class OpenProgramTool implements McpTool {
                 ),
                 "name", Map.of(
                     "type", "string",
-                    "description", "Program name to open (required for action 'open'). Supports partial matching."
+                    "description", "Program name or full project path to open (required for action 'open'). Supports partial name matching."
                 ),
                 "folder", Map.of(
                     "type", "string",
@@ -130,7 +130,7 @@ public class OpenProgramTool implements McpTool {
             sb.append("  (").append(df.getContentType()).append(")\n");
         }
         sb.append("\nTotal: ").append(files.size()).append(" file(s)\n");
-        sb.append("\nUse {\"action\": \"open\", \"name\": \"<name>\"} to open one in CodeBrowser.");
+        sb.append("\nUse {\"action\": \"open\", \"name\": \"<pathname>\"} to open one in CodeBrowser.");
 
         return McpSchema.CallToolResult.builder()
             .addTextContent(sb.toString())
@@ -149,7 +149,8 @@ public class OpenProgramTool implements McpTool {
         // Check if already open
         List<Program> openPrograms = backend.getAllOpenPrograms();
         for (Program p : openPrograms) {
-            if (p.getName().equalsIgnoreCase(name)) {
+            String pPath = p.getDomainFile().getPathname();
+            if (p.getName().equalsIgnoreCase(name) || pPath.equalsIgnoreCase(name)) {
                 return textResult("Program '" + p.getName() + "' is already open in CodeBrowser.");
             }
         }
@@ -187,22 +188,36 @@ public class OpenProgramTool implements McpTool {
     }
 
     /**
-     * Find a file by name with exact, case-insensitive, then partial matching.
+     * Find a file by full project path or name, with exact, case-insensitive,
+     * then partial matching. Full pathname (e.g. "/banks/bank00.bin") is tried
+     * before plain name so that callers can paste directly from the 'list' output.
      */
     private DomainFile findFile(List<DomainFile> files, String name) {
-        // Exact match
+        // Exact pathname match (e.g. "/banks/bank00.bin")
+        for (DomainFile df : files) {
+            if (df.getPathname().equals(name)) {
+                return df;
+            }
+        }
+        // Exact name match (e.g. "bank00.bin")
         for (DomainFile df : files) {
             if (df.getName().equals(name)) {
                 return df;
             }
         }
-        // Case-insensitive match
+        // Case-insensitive pathname match
+        for (DomainFile df : files) {
+            if (df.getPathname().equalsIgnoreCase(name)) {
+                return df;
+            }
+        }
+        // Case-insensitive name match
         for (DomainFile df : files) {
             if (df.getName().equalsIgnoreCase(name)) {
                 return df;
             }
         }
-        // Partial match (contains)
+        // Partial name match (contains)
         String lowerName = name.toLowerCase();
         for (DomainFile df : files) {
             if (df.getName().toLowerCase().contains(lowerName)) {

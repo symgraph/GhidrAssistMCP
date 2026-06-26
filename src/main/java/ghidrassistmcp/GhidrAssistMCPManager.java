@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import ghidra.app.services.ProgramManager;
+import ghidra.framework.model.DomainFile;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.framework.preferences.Preferences;
 import ghidra.program.model.listing.Program;
@@ -257,7 +258,15 @@ public class GhidrAssistMCPManager {
 
         List<Program> programs = getAllOpenPrograms();
 
-        // Exact match
+        // Exact project path match (e.g. "/v1/app.exe" disambiguates from "/v2/app.exe")
+        for (Program p : programs) {
+            DomainFile df = p.getDomainFile();
+            if (df != null && df.getPathname().equals(programName)) {
+                return p;
+            }
+        }
+
+        // Exact name match
         for (Program p : programs) {
             if (p.getName().equals(programName)) {
                 return p;
