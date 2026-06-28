@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,11 @@ public class McpTaskManager {
      */
     public McpTask submitTask(String toolName, Map<String, Object> arguments,
                                Supplier<McpSchema.CallToolResult> taskExecutor) {
+        return submitTask(toolName, arguments, task -> taskExecutor.get());
+    }
+
+    public McpTask submitTask(String toolName, Map<String, Object> arguments,
+                               Function<McpTask, McpSchema.CallToolResult> taskExecutor) {
         // Clean up old tasks before creating new ones
         cleanupOldTasks();
 
@@ -73,7 +79,7 @@ public class McpTaskManager {
                 task.markStarted();
                 Msg.info(this, "Task started: " + task.getTaskId() + " for tool: " + toolName);
 
-                McpSchema.CallToolResult result = taskExecutor.get();
+                McpSchema.CallToolResult result = taskExecutor.apply(task);
                 task.markCompleted(result);
 
                 Msg.info(this, "Task completed: " + task.getTaskId() + " in " + task.getDurationMillis() + "ms");

@@ -98,7 +98,11 @@ public class ImportFileTool implements McpTool {
                     "description", "Destination folder in the Ghidra project (e.g. '/' or '/banks'). Default: '/'.")),
                 Map.entry("open_after_import", Map.of(
                     "type", "boolean",
-                    "description", "Open the imported program in CodeBrowser after import. Default: true."))
+                    "description", "Open the imported program in CodeBrowser after import. Default: true.")),
+                Map.entry("suppress_analysis_prompt", Map.of(
+                    "type", "boolean",
+                    "description", "If open_after_import is true, set 'Should Ask To Analyze' to false before opening. Default: true.",
+                    "default", true))
             ),
             List.of("file_path"), null, null, null);
     }
@@ -159,6 +163,8 @@ public class ImportFileTool implements McpTool {
 
         Object openAfterObj = arguments.get("open_after_import");
         boolean openAfterImport = (openAfterObj == null) || Boolean.TRUE.equals(openAfterObj);
+        Object suppressPromptObj = arguments.get("suppress_analysis_prompt");
+        boolean suppressAnalysisPrompt = (suppressPromptObj == null) || Boolean.TRUE.equals(suppressPromptObj);
 
         // --- Perform import ---
         MessageLog messageLog = new MessageLog();
@@ -166,10 +172,11 @@ public class ImportFileTool implements McpTool {
         try {
             if (languageStr != null && !languageStr.isBlank()) {
                 return importWithLanguage(file, project, folderPath, languageStr, compilerStr,
-                    baseAddrStr, programName, openAfterImport, messageLog, pluginTool);
+                    baseAddrStr, programName, openAfterImport, suppressAnalysisPrompt,
+                    messageLog, pluginTool);
             } else {
                 return importAutoDetect(file, project, folderPath, baseAddrStr, programName,
-                    openAfterImport, messageLog, pluginTool);
+                    openAfterImport, suppressAnalysisPrompt, messageLog, pluginTool);
             }
         } catch (ghidra.util.exception.DuplicateNameException e) {
             return textResult("A program with that name already exists in folder '" + folderPath +
@@ -182,7 +189,8 @@ public class ImportFileTool implements McpTool {
 
     private McpSchema.CallToolResult importWithLanguage(File file, Project project, String folderPath,
             String languageStr, String compilerStr, String baseAddrStr, String programName,
-            boolean openAfterImport, MessageLog messageLog, PluginTool pluginTool) throws Exception {
+            boolean openAfterImport, boolean suppressAnalysisPrompt, MessageLog messageLog,
+            PluginTool pluginTool) throws Exception {
 
         Language language;
         try {
@@ -228,7 +236,7 @@ public class ImportFileTool implements McpTool {
             StringBuilder result = buildResultMessage(importedProgram, folderPath, messageLog);
 
             if (openAfterImport) {
-                result.append(openInCodeBrowser(pluginTool, importedProgram));
+                result.append(openInCodeBrowser(pluginTool, importedProgram, suppressAnalysisPrompt));
             }
 
             return McpSchema.CallToolResult.builder()
@@ -239,7 +247,7 @@ public class ImportFileTool implements McpTool {
 
     private McpSchema.CallToolResult importAutoDetect(File file, Project project, String folderPath,
             String baseAddrStr, String programName, boolean openAfterImport,
-            MessageLog messageLog, PluginTool pluginTool) throws Exception {
+            boolean suppressAnalysisPrompt, MessageLog messageLog, PluginTool pluginTool) throws Exception {
 
         ProgramLoader.Builder loader = ProgramLoader.builder()
             .source(file)
@@ -265,7 +273,7 @@ public class ImportFileTool implements McpTool {
             StringBuilder result = buildResultMessage(importedProgram, folderPath, messageLog);
 
             if (openAfterImport) {
-                result.append(openInCodeBrowser(pluginTool, importedProgram));
+                result.append(openInCodeBrowser(pluginTool, importedProgram, suppressAnalysisPrompt));
             }
 
             return McpSchema.CallToolResult.builder()
@@ -300,11 +308,16 @@ public class ImportFileTool implements McpTool {
         }
     }
 
-    private static String openInCodeBrowser(PluginTool pluginTool, Program program) {
+    private static String openInCodeBrowser(PluginTool pluginTool, Program program,
+                                            boolean suppressAnalysisPrompt) {
         ProgramManager pm = pluginTool.getService(ProgramManager.class);
         if (pm != null) {
+            if (suppressAnalysisPrompt) {
+                AnalysisUtils.setAskToAnalyze(program, false);
+            }
             pm.openProgram(program);
-            return "  Opened in CodeBrowser: yes\n";
+            return "  Opened in CodeBrowser: yes\n" +
+                   "  Should Ask To Analyze: " + AnalysisUtils.shouldAskToAnalyze(program) + "\n";
         }
         return "  Opened in CodeBrowser: no (ProgramManager not available)\n";
     }
