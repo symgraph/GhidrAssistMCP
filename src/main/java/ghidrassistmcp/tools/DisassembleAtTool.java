@@ -30,17 +30,22 @@ public class DisassembleAtTool implements McpTool {
     @Override
     public String getDescription() {
         return "Disassemble code at a specific address, even if no function is defined. "
-             + "Converts undefined bytes into instructions and returns the disassembly listing.";
+             + "Converts undefined bytes into instructions and can optionally clear existing "
+             + "code/data units first.";
     }
 
     @Override
     public McpSchema.JsonSchema getInputSchema() {
         return new McpSchema.JsonSchema("object",
-            Map.of(
-                "address", Map.of("type", "string",
-                    "description", "Start address to disassemble (e.g. '0xC121' or 'C121')"),
-                "length", Map.of("type", "integer",
-                    "description", "Maximum number of bytes to disassemble (default: 128)")
+            Map.ofEntries(
+                Map.entry("address", Map.of("type", "string",
+                    "description", "Start address to disassemble (e.g. '0xC121' or 'C121')")),
+                Map.entry("length", Map.of("type", "integer",
+                    "description", "Number of bytes to disassemble or clear (default: 128)")),
+                Map.entry("clear_existing", Map.of(
+                    "type", "boolean",
+                    "description", "Clear existing instructions/data in the range before disassembly. Default: false.",
+                    "default", false))
             ),
             List.of("address"), null, null, null);
     }
@@ -62,6 +67,7 @@ public class DisassembleAtTool implements McpTool {
         // Cap at a reasonable maximum
         if (length > 4096) length = 4096;
         if (length < 1) length = 128;
+        boolean clearExisting = Boolean.TRUE.equals(arguments.get("clear_existing"));
 
         Address startAddr;
         try {
@@ -82,8 +88,18 @@ public class DisassembleAtTool implements McpTool {
         // Disassemble the region (this is a write operation - converts bytes to instructions)
         int txId = currentProgram.startTransaction("Disassemble at " + addressStr);
         try {
+            if (clearExisting) {
+                currentProgram.getListing().clearCodeUnits(startAddr, endAddr, false);
+            }
             DisassembleCommand cmd = new DisassembleCommand(startAddr, range, true);
-            cmd.applyTo(currentProgram);
+            boolean success = cmd.applyTo(currentProgram);
+            if (!success) {
+                currentProgram.endTransaction(txId, false);
+                return McpSchema.CallToolResult.builder()
+                    .addTextContent("Disassembly failed at " + addressStr +
+                        ". Try clear_existing=true if the range is currently defined as data.")
+                    .build();
+            }
             currentProgram.endTransaction(txId, true);
         } catch (Exception e) {
             currentProgram.endTransaction(txId, false);
@@ -96,6 +112,7 @@ public class DisassembleAtTool implements McpTool {
         Listing listing = currentProgram.getListing();
         StringBuilder sb = new StringBuilder();
         sb.append("Disassembly at ").append(startAddr).append(":\n\n");
+        sb.append("Cleared existing code/data units: ").append(clearExisting).append("\n\n");
 
         int instrCount = 0;
         InstructionIterator iter = listing.getInstructions(startAddr, true);
@@ -118,4 +135,7 @@ public class DisassembleAtTool implements McpTool {
         return McpSchema.CallToolResult.builder()
             .addTextContent(sb.toString()).build();
     }
+
+    @Override
+    public boolean isDestructive() { return true; }
 }

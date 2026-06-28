@@ -6,6 +6,7 @@ package ghidrassistmcp;
 import java.util.Map;
 
 import ghidra.program.model.listing.Program;
+import ghidrassistmcp.tasks.McpTask;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -42,6 +43,14 @@ public interface McpTool {
     default McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         // Default implementation delegates to the original method for backward compatibility
         return execute(arguments, currentProgram);
+    }
+
+    /**
+     * Execute the tool with async task context for progress reporting.
+     */
+    default McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram,
+                                             GhidrAssistMCPBackend backend, McpTask task) {
+        return execute(arguments, currentProgram, backend);
     }
 
     // ==================== MCP 2025-11-25 Tool Annotations ====================
