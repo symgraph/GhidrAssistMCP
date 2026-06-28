@@ -275,7 +275,7 @@ final class AnalysisUtils {
                     setEnum(options, optionName, optionValue.toString());
                     break;
                 case KEYSTROKE_TYPE:
-                    options.setKeyStroke(optionName,
+                    options.putObject(optionName,
                         (KeyStroke) convertOptionValue(options, optionName, optionType, optionValue));
                     break;
                 case FONT_TYPE:

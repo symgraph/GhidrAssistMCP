@@ -10,12 +10,12 @@ GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's co
 
 - **MCP Server Integration**: Full Model Context Protocol server implementation using official SDK
 - **Dual HTTP Transports**: Supports SSE and Streamable HTTP transports for maximum client compatibility
-- **48 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
+- **49 Built-in Tools**: Comprehensive set of analysis tools with action-based consolidation for cleaner APIs
 - **6 MCP Resources**: Static data resources for program info, functions, strings, imports, exports, and segments
 - **7 MCP Prompts**: Pre-built analysis prompts for common reverse engineering tasks
 - **Result Caching**: Intelligent caching system to improve performance for repeated queries
 - **Async Task Support**: Long-running operations execute asynchronously with task management
-- **Multi-Program Support**: Work with multiple open programs simultaneously using `program_name` parameter
+- **Multi-Program Support**: Work with multiple open programs simultaneously using `program_name`; use `list_binaries` Project Path values to disambiguate duplicate filenames
 - **Multi-Window Support**: Single MCP server shared across all CodeBrowser windows with intelligent focus tracking
 - **Active Context Awareness**: Automatic detection of which binary window is in focus, with context hints in all tool responses
 - **Configurable UI**: Easy-to-use interface for managing tools and monitoring activity
@@ -35,7 +35,7 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 ### Prerequisites
 
-- **Ghidra 11.4+** (tested with Ghidra 12.0 Public)
+- **Ghidra 11.4+** (tested with Ghidra 12.1 Public)
 - **An MCP Client (Like GhidrAssist)**
 
 ### Binary Release (Recommended)
@@ -98,7 +98,7 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 The Configuration tab allows you to:
 
-- **View all available tools** (48 total)
+- **View all available tools** (49 total)
 - **Enable/disable individual tools** using checkboxes
 - **Save configuration** to persist across sessions
 - **Monitor tool status** in real-time
@@ -112,15 +112,15 @@ First, build and install the extension so Ghidra can load the compiled classes a
 ```bash
 cd /path/to/GhidrAssistMCP
 
-export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.0_PUBLIC
+export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1_PUBLIC
 gradle installExtension
 ```
 
 Set paths for your Ghidra install and extracted user extension. On Linux, Ghidra user extensions usually live under `~/.config/ghidra/<ghidra_profile>/Extensions`:
 
 ```bash
-export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.0_PUBLIC
-export GHIDRA_USER_EXTENSIONS_DIR="$HOME/.config/ghidra/ghidra_12.0_PUBLIC/Extensions"
+export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1_PUBLIC
+export GHIDRA_USER_EXTENSIONS_DIR="$HOME/.config/ghidra/ghidra_12.1_PUBLIC/Extensions"
 export GHIDRASSISTMCP_EXT="$GHIDRA_USER_EXTENSIONS_DIR/GhidrAssistMCP"
 ```
 
@@ -170,7 +170,7 @@ GhidrAssistMCP provides 49 tools organized into categories. Several tools use an
 | Tool | Description |
 | ---- | ----------- |
 | `get_binary_info` | Get basic program information (name, architecture, compiler, etc.) |
-| `list_binaries` | List all open programs across all CodeBrowser windows |
+| `list_binaries` | List all open programs across all CodeBrowser windows, including Project Path values for unambiguous `program_name` targeting |
 | `open_program` | List/open project programs in CodeBrowser, with optional analysis prompt suppression and analysis-after-open task submission |
 | `close_program` | Close an open CodeBrowser program; changed programs require `save=true` or `ignore_changes=true` |
 | `import_file` | Import a host file into the current Ghidra project and optionally open it *(disabled by default)* |
@@ -573,7 +573,7 @@ When working with multiple open programs, first list them:
 }
 ```
 
-Then specify which program to target using `program_name`:
+Then specify which program to target using `program_name`. When multiple programs share the same filename, use the `Project Path` shown by `list_binaries`:
 
 ```json
 {
@@ -581,7 +581,7 @@ Then specify which program to target using `program_name`:
   "params": {
     "name": "get_functions",
     "arguments": {
-      "program_name": "target_binary.exe",
+      "program_name": "/project/folder/target_binary.exe",
       "limit": 10
     }
   }
@@ -665,7 +665,7 @@ GhidrAssistMCP/
 │   ├── TraceNetworkDataPrompt.java
 │   ├── CompareFunctionsPrompt.java
 │   └── ReverseEngineerStructPrompt.java
-└── tools/                    # MCP Tools (48 total)
+└── tools/                    # MCP Tools (49 total)
     ├── Consolidated action-based tools
     ├── Analysis tools
     ├── Modification tools

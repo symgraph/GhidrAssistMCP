@@ -6,6 +6,7 @@ package ghidrassistmcp.tools;
 import java.util.List;
 import java.util.Map;
 
+import ghidra.framework.model.DomainFile;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
@@ -26,10 +27,10 @@ public class ListProgramsTool implements McpTool {
     @Override
     public String getDescription() {
         return "List all currently open programs/binaries in Ghidra. " +
-               "Shows program names, paths, and which one is currently active. " +
+               "Shows program names, project paths, executable paths, and which one is currently active. " +
                "Use this to discover available targets before running other tools. " +
                "IMPORTANT: When multiple programs are open, use the 'program_name' parameter " +
-               "in other tools to specify which program to operate on. " +
+               "with the listed Project Path to specify which program to operate on. " +
                "Example: {}";
     }
 
@@ -79,7 +80,8 @@ public class ListProgramsTool implements McpTool {
                 isActive ? " [ACTIVE]" : ""));
 
             // Add program details
-            result.append(String.format("   Path: %s\n", p.getExecutablePath()));
+            result.append(String.format("   Project Path: %s\n", projectPath(p)));
+            result.append(String.format("   Executable Path: %s\n", p.getExecutablePath()));
             result.append(String.format("   Format: %s\n", p.getExecutableFormat()));
             result.append(String.format("   Language: %s\n", p.getLanguageID()));
 
@@ -93,12 +95,17 @@ public class ListProgramsTool implements McpTool {
 
         if (programs.size() > 1) {
             result.append("\nNOTE: Multiple programs are open. To target a specific program, ");
-            result.append("use the 'program_name' parameter in tool calls.\n");
-            result.append("Example: {\"program_name\": \"").append(programs.get(0).getName()).append("\", ...}");
+            result.append("use the listed Project Path as the 'program_name' parameter in tool calls.\n");
+            result.append("Example: {\"program_name\": \"").append(projectPath(programs.get(0))).append("\", ...}");
         }
 
         return McpSchema.CallToolResult.builder()
             .addTextContent(result.toString())
             .build();
+    }
+
+    private String projectPath(Program program) {
+        DomainFile domainFile = program.getDomainFile();
+        return domainFile != null ? domainFile.getPathname() : program.getName();
     }
 }

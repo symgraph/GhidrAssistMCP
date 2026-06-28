@@ -5,9 +5,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.CancelledListener;
-import ghidra.util.task.TaskMonitor;
+import ghidra.util.task.TaskMonitorAdapter;
 
-public class McpTaskMonitor implements TaskMonitor {
+public class McpTaskMonitor extends TaskMonitorAdapter {
 
     private final McpTask task;
     private final int minPercent;
@@ -91,7 +91,7 @@ public class McpTaskMonitor implements TaskMonitor {
     }
 
     @Override
-    public void checkCanceled() throws CancelledException {
+    public void checkCancelled() throws CancelledException {
         if (isCancelled()) {
             throw new CancelledException();
         }
@@ -142,7 +142,7 @@ public class McpTaskMonitor implements TaskMonitor {
     }
 
     @Override
-    public void clearCanceled() {
+    public void clearCancelled() {
         cancelled = false;
         publish();
     }

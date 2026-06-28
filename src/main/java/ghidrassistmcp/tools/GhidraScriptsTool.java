@@ -19,6 +19,7 @@ import ghidra.app.script.GhidraScript;
 import ghidra.app.script.GhidraScriptProvider;
 import ghidra.app.script.GhidraScriptUtil;
 import ghidra.app.script.GhidraState;
+import ghidra.app.script.ScriptControls;
 import ghidra.app.script.ScriptInfo;
 import ghidra.framework.model.Project;
 import ghidra.framework.plugintool.PluginTool;
@@ -300,7 +301,7 @@ public class GhidraScriptsTool implements McpTool {
             }
 
             GhidraState state = buildState(currentProgram, backend);
-            script.execute(state, TaskMonitor.DUMMY, writer);
+            script.execute(state, new ScriptControls(writer, writer, TaskMonitor.DUMMY));
 
             if (backend != null) {
                 backend.clearCache();
