@@ -20,7 +20,6 @@ import ghidra.program.model.pcode.HighFunction;
 import ghidra.program.model.pcode.PcodeBlockBasic;
 import ghidra.program.model.pcode.PcodeOp;
 import ghidra.program.model.pcode.PcodeOpAST;
-import ghidra.program.model.symbol.Namespace;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -312,51 +311,7 @@ public class GetCodeTool implements McpTool {
             // Not an address, try as function name
         }
 
-        // Check if this is a qualified name (contains ::)
-        if (identifier.contains("::")) {
-            String[] parts = identifier.split("::");
-            if (parts.length >= 2) {
-                String simpleName = parts[parts.length - 1];
-                String[] namespaceParts = new String[parts.length - 1];
-                System.arraycopy(parts, 0, namespaceParts, 0, parts.length - 1);
-
-                // Search for function with matching name AND namespace
-                for (Function function : program.getFunctionManager().getFunctions(true)) {
-                    if (function.getName().equals(simpleName) &&
-                        matchesNamespaceHierarchy(function, namespaceParts)) {
-                        return function;
-                    }
-                }
-            }
-        }
-
-        // Fall back to simple name search
-        for (Function function : program.getFunctionManager().getFunctions(true)) {
-            if (function.getName().equals(identifier)) {
-                return function;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Check if a function's namespace hierarchy matches the given qualified path.
-     * For example, if qualifiedPath is ["Outer", "Inner"], checks if function is in Inner,
-     * which is in Outer.
-     */
-    private boolean matchesNamespaceHierarchy(Function function, String[] namespaceParts) {
-        Namespace ns = function.getParentNamespace();
-
-        // Walk backwards through the namespace parts
-        for (int i = namespaceParts.length - 1; i >= 0; i--) {
-            if (ns == null || ns.isGlobal()) {
-                return false; // Ran out of namespaces before matching all parts
-            }
-            if (!ns.getName().equals(namespaceParts[i])) {
-                return false; // Namespace name doesn't match
-            }
-            ns = ns.getParentNamespace();
-        }
-        return true;
+        // Handles C++ qualified names (Class::method) and plain names
+        return FunctionLookup.findByQualifiedName(program, identifier);
     }
 }

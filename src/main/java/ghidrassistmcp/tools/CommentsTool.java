@@ -330,9 +330,6 @@ public class CommentsTool implements McpTool {
     }
 
     private Function findFunctionByName(Program program, String functionName) {
-        for (Function function : program.getFunctionManager().getFunctions(true)) {
-            if (function.getName().equals(functionName)) return function;
-        }
-        return null;
+        return FunctionLookup.findByName(program, functionName);
     }
 }

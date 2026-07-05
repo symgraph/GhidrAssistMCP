@@ -587,14 +587,7 @@ final class RenameSymbolCore {
     }
 
     private static Function findFunctionByName(Program program, String functionName) {
-        var functionManager = program.getFunctionManager();
-        var functions = functionManager.getFunctions(true);
-        for (Function function : functions) {
-            if (function.getName().equals(functionName)) {
-                return function;
-            }
-        }
-        return null;
+        return FunctionLookup.findByName(program, functionName);
     }
 
     /**

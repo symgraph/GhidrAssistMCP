@@ -143,11 +143,6 @@ public class GetBasicBlocksTool implements McpTool {
             // Not an address
         }
 
-        for (Function function : program.getFunctionManager().getFunctions(true)) {
-            if (function.getName().equals(identifier)) {
-                return function;
-            }
-        }
-        return null;
+        return FunctionLookup.findByName(program, identifier);
     }
 }
