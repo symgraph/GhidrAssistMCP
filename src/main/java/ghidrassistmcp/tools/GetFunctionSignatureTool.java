@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
-import ghidra.program.model.symbol.Namespace;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -103,42 +102,6 @@ public class GetFunctionSignatureTool implements McpTool {
             // Not an address, continue to name lookup.
         }
 
-        if (identifier.contains("::")) {
-            String[] parts = identifier.split("::");
-            if (parts.length >= 2) {
-                String simpleName = parts[parts.length - 1];
-                String[] namespaceParts = new String[parts.length - 1];
-                System.arraycopy(parts, 0, namespaceParts, 0, parts.length - 1);
-
-                for (Function function : program.getFunctionManager().getFunctions(true)) {
-                    if (function.getName().equals(simpleName) &&
-                        matchesNamespaceHierarchy(function, namespaceParts)) {
-                        return function;
-                    }
-                }
-            }
-        }
-
-        for (Function function : program.getFunctionManager().getFunctions(true)) {
-            if (function.getName().equals(identifier)) {
-                return function;
-            }
-        }
-
-        return null;
-    }
-
-    private boolean matchesNamespaceHierarchy(Function function, String[] namespaceParts) {
-        Namespace ns = function.getParentNamespace();
-        for (int i = namespaceParts.length - 1; i >= 0; i--) {
-            if (ns == null || ns.isGlobal()) {
-                return false;
-            }
-            if (!ns.getName().equals(namespaceParts[i])) {
-                return false;
-            }
-            ns = ns.getParentNamespace();
-        }
-        return true;
+        return FunctionLookup.findByQualifiedName(program, identifier);
     }
 }

@@ -56,6 +56,9 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 ### Building from Source
 
+Source builds require Java 25 or newer. The included Gradle wrapper pins the
+supported Gradle release; use it instead of a system Gradle installation.
+
 1. **Clone the repository**:
 
    ```bash
@@ -71,7 +74,7 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
    Ensure Ghidra isn't running and run:
 
    ```bash
-   gradle installExtension
+   ./gradlew installExtension
    ```
 
    This copies the built ZIP into your Ghidra install (`[GHIDRA_INSTALL_DIR]/Extensions/Ghidra`) and extracts it into your Ghidra **user** Extensions folder (replacing any existing extracted copy).
@@ -113,7 +116,7 @@ First, build and install the extension so Ghidra can load the compiled classes a
 cd /path/to/GhidrAssistMCP
 
 export GHIDRA_INSTALL_DIR=/path/to/ghidra_12.1_PUBLIC
-gradle installExtension
+./gradlew installExtension
 ```
 
 Set paths for your Ghidra install and extracted user extension. On Linux, Ghidra user extensions usually live under `~/.config/ghidra/<ghidra_profile>/Extensions`:
@@ -774,22 +777,22 @@ src/main/java/ghidrassistmcp/
 
 ```bash
 # Clean build
-gradle clean
+./gradlew clean
 
 # Build extension zip (written to dist/)
-gradle buildExtension
+./gradlew buildExtension
 
 # Install (extract) extension into the Ghidra user Extensions directory
-gradle installExtension
+./gradlew installExtension
 
 # Uninstall (delete extracted directory from the Ghidra user Extensions directory)
-gradle uninstallExtension
+./gradlew uninstallExtension
 
 # Build/install with specific Ghidra path (required if GHIDRA_INSTALL_DIR isn't set)
-gradle -PGHIDRA_INSTALL_DIR=/path/to/ghidra installExtension
+./gradlew -PGHIDRA_INSTALL_DIR=/path/to/ghidra installExtension
 
 # Debug build
-gradle buildExtension --debug
+./gradlew buildExtension --debug
 ```
 
 ### Dependencies

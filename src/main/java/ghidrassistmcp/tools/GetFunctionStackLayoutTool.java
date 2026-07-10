@@ -81,9 +81,6 @@ public class GetFunctionStackLayoutTool implements McpTool {
                 if (f != null) return f;
             }
         } catch (Exception e) { /* not an address */ }
-        for (Function f : program.getFunctionManager().getFunctions(true)) {
-            if (f.getName().equals(identifier)) return f;
-        }
-        return null;
+        return FunctionLookup.findByName(program, identifier);
     }
 }

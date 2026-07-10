@@ -359,10 +359,7 @@ public class VariablesTool implements McpTool {
             }
         } catch (Exception e) { /* not an address */ }
 
-        for (Function f : program.getFunctionManager().getFunctions(true)) {
-            if (f.getName().equals(name)) return f;
-        }
-        return null;
+        return FunctionLookup.findByName(program, name);
     }
 
     private static String coalesce(Map<String, Object> arguments, String... keys) {

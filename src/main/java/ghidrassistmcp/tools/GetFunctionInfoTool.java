@@ -59,24 +59,20 @@ public class GetFunctionInfoTool implements McpTool {
     }
     
     private String getFunctionInfo(Program program, String functionName) {
-        var functionManager = program.getFunctionManager();
-        var functions = functionManager.getFunctions(true);
-        
-        for (var function : functions) {
-            if (function.getName().equals(functionName)) {
-                StringBuilder info = new StringBuilder();
-                info.append("Function Information:\n");
-                info.append("Name: ").append(function.getName(true)).append("\n");
-                info.append("Entry Point: ").append(function.getEntryPoint()).append("\n");
-                info.append("Body: ").append(function.getBody()).append("\n");
-                info.append("Parameter Count: ").append(function.getParameterCount()).append("\n");
-                info.append("Return Type: ").append(function.getReturnType()).append("\n");
-                info.append("Signature: ").append(function.getSignature()).append("\n");
-                
-                return info.toString();
-            }
+        var function = FunctionLookup.findByName(program, functionName);
+        if (function == null) {
+            return "Function not found: " + functionName;
         }
-        
-        return "Function not found: " + functionName;
+
+        StringBuilder info = new StringBuilder();
+        info.append("Function Information:\n");
+        info.append("Name: ").append(function.getName(true)).append("\n");
+        info.append("Entry Point: ").append(function.getEntryPoint()).append("\n");
+        info.append("Body: ").append(function.getBody()).append("\n");
+        info.append("Parameter Count: ").append(function.getParameterCount()).append("\n");
+        info.append("Return Type: ").append(function.getReturnType()).append("\n");
+        info.append("Signature: ").append(function.getSignature()).append("\n");
+
+        return info.toString();
     }
 }

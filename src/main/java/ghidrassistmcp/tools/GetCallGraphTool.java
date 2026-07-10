@@ -183,12 +183,6 @@ public class GetCallGraphTool implements McpTool {
         }
 
         // Try as function name
-        for (Function function : program.getFunctionManager().getFunctions(true)) {
-            if (function.getName().equals(identifier)) {
-                return function;
-            }
-        }
-
-        return null;
+        return FunctionLookup.findByName(program, identifier);
     }
 }
