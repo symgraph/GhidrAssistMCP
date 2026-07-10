@@ -205,6 +205,47 @@ public class GhidrAssistMCPManager {
     }
 
     /**
+     * Get the CodeBrowser tool that owns the requested program. Prefer the active tool when the
+     * same program is open in more than one window so its current UI options take precedence.
+     */
+    public PluginTool getToolForProgram(Program program) {
+        if (program == null) {
+            return null;
+        }
+
+        PluginTool currentActiveTool = activeTool;
+        if (ownsProgram(currentActiveTool, program)) {
+            return currentActiveTool;
+        }
+        for (PluginTool tool : registeredTools) {
+            if (ownsProgram(tool, program)) {
+                return tool;
+            }
+        }
+        return null;
+    }
+
+    private boolean ownsProgram(PluginTool tool, Program program) {
+        if (tool == null) {
+            return false;
+        }
+        ProgramManager programManager = tool.getService(ProgramManager.class);
+        if (programManager == null) {
+            return false;
+        }
+        Program[] openPrograms = programManager.getAllOpenPrograms();
+        if (openPrograms == null) {
+            return false;
+        }
+        for (Program openProgram : openPrograms) {
+            if (openProgram == program) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Set the active plugin instance (called when a plugin gains focus).
      * This provides access to UI context like current address and function.
      */

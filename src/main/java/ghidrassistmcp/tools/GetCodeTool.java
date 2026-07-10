@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import ghidra.app.decompiler.DecompInterface;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.CommentType;
@@ -22,6 +21,9 @@ import ghidra.program.model.pcode.PcodeOp;
 import ghidra.program.model.pcode.PcodeOpAST;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
+import ghidrassistmcp.GhidrAssistMCPBackend;
+import ghidrassistmcp.decompiler.DecompilerService;
+import ghidrassistmcp.decompiler.DecompilerSession;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -29,6 +31,12 @@ import io.modelcontextprotocol.spec.McpSchema;
  * Replaces separate decompile_function, disassemble_function, and get_pcode tools.
  */
 public class GetCodeTool implements McpTool {
+
+    private final DecompilerService decompilerService;
+
+    public GetCodeTool(DecompilerService decompilerService) {
+        this.decompilerService = decompilerService;
+    }
 
     @Override
     public boolean isLongRunning() {
@@ -39,6 +47,16 @@ public class GetCodeTool implements McpTool {
     @Override
     public boolean isCacheable() {
         return true;
+    }
+
+    @Override
+    public String getCacheDiscriminator(Map<String, Object> arguments, Program currentProgram,
+            GhidrAssistMCPBackend backend) {
+        String format = (String) arguments.get("format");
+        if (format != null && format.equalsIgnoreCase("disassembly")) {
+            return "disassembly";
+        }
+        return decompilerService.getOptionsFingerprint(currentProgram);
     }
 
     @Override
@@ -131,11 +149,9 @@ public class GetCodeTool implements McpTool {
      * Get decompiled C-like code for a function.
      */
     private McpSchema.CallToolResult getDecompiledCode(Program program, Function function) {
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(function.getProgram());
-
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(function.getProgram())) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
 
             if (results.isTimedOut()) {
                 return McpSchema.CallToolResult.builder()
@@ -165,8 +181,6 @@ public class GetCodeTool implements McpTool {
             return McpSchema.CallToolResult.builder()
                 .addTextContent("Error decompiling function " + function.getName(true) + ": " + e.getMessage())
                 .build();
-        } finally {
-            decompiler.dispose();
         }
     }
 
@@ -223,10 +237,9 @@ public class GetCodeTool implements McpTool {
         result.append("P-Code for: ").append(function.getName(true))
               .append(" @ ").append(function.getEntryPoint()).append("\n\n");
 
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(program);
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(program)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
 
             if (!results.decompileCompleted()) {
                 return McpSchema.CallToolResult.builder()
@@ -281,8 +294,6 @@ public class GetCodeTool implements McpTool {
             var blocks = highFunction.getBasicBlocks();
             result.append("- Basic Blocks: ").append(blocks.size()).append("\n");
 
-        } finally {
-            decompiler.dispose();
         }
 
         return McpSchema.CallToolResult.builder()

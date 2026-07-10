@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.SwingUtilities;
 
 import ghidra.app.cmd.function.ApplyFunctionSignatureCmd;
-import ghidra.app.decompiler.DecompInterface;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.app.util.parser.FunctionSignatureParser;
 import ghidra.program.model.address.Address;
@@ -29,9 +28,17 @@ import ghidra.program.model.symbol.SourceType;
 import ghidra.util.task.ConsoleTaskMonitor;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
+import ghidrassistmcp.decompiler.DecompilerService;
+import ghidrassistmcp.decompiler.DecompilerSession;
 import io.modelcontextprotocol.spec.McpSchema;
 
 public class VariablesTool implements McpTool {
+
+    private final DecompilerService decompilerService;
+
+    public VariablesTool(DecompilerService decompilerService) {
+        this.decompilerService = decompilerService;
+    }
 
     @Override
     public boolean isReadOnly() { return false; }
@@ -128,10 +135,9 @@ public class VariablesTool implements McpTool {
         Function function = findFunction(program, functionName);
         if (function == null) return result("Function not found: " + functionName);
 
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(program);
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(program)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
             if (!results.isValid()) return result("Decompilation failed: " + results.getErrorMessage());
 
             HighFunction hf = results.getHighFunction();
@@ -176,8 +182,6 @@ public class VariablesTool implements McpTool {
             if (localCount == 0) sb.append("  (none)\n");
 
             return result(sb.toString());
-        } finally {
-            decompiler.dispose();
         }
     }
 
@@ -214,7 +218,7 @@ public class VariablesTool implements McpTool {
             renameArgs.put("target_type", "data");
             renameArgs.put("identifier", globalTarget);
             renameArgs.put("new_name", newName);
-            return result(RenameSymbolCore.renameOne(renameArgs, program).message);
+            return result(RenameSymbolCore.renameOne(renameArgs, program, decompilerService).message);
         }
 
         if (functionName == null || variableName == null) {
@@ -224,10 +228,9 @@ public class VariablesTool implements McpTool {
         Function function = findFunction(program, functionName);
         if (function == null) return result("Function not found: " + functionName);
 
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(program);
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(program)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
             if (!results.isValid()) return result("Decompilation failed");
 
             HighFunction hf = results.getHighFunction();
@@ -250,8 +253,6 @@ public class VariablesTool implements McpTool {
                 }
             }
             return result("Variable '" + variableName + "' not found in " + functionName);
-        } finally {
-            decompiler.dispose();
         }
     }
 
@@ -271,10 +272,9 @@ public class VariablesTool implements McpTool {
         if (dataType == null) dataType = dtm.getDataType(dataTypeName);
         if (dataType == null) return result("Data type not found: " + dataTypeName);
 
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(program);
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(program)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
             if (!results.isValid()) return result("Decompilation failed");
 
             HighFunction hf = results.getHighFunction();
@@ -297,8 +297,6 @@ public class VariablesTool implements McpTool {
                 }
             }
             return result("Variable '" + variableName + "' not found in " + functionName);
-        } finally {
-            decompiler.dispose();
         }
     }
 

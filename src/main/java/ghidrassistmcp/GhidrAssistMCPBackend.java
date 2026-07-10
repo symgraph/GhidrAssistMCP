@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
 import ghidrassistmcp.cache.McpCache;
+import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.prompts.AnalyzeFunctionPrompt;
 import ghidrassistmcp.prompts.DocumentFunctionPrompt;
 import ghidrassistmcp.prompts.IdentifyVulnerabilityPrompt;
@@ -95,8 +96,16 @@ public class GhidrAssistMCPBackend implements McpBackend {
     private final McpResourceRegistry resourceRegistry;
     private final McpPromptRegistry promptRegistry;
     private final McpCache cache;
+    private final DecompilerService decompilerService;
     
     public GhidrAssistMCPBackend() {
+        this.decompilerService = new DecompilerService(program -> {
+            if (manager == null) {
+                return null;
+            }
+            return manager.getToolForProgram(program);
+        });
+
         // Initialize task manager for async operations
         this.taskManager = new McpTaskManager();
 
@@ -130,16 +139,16 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
         // Register consolidated tools (replace individual tools)
         registerTool(new CommentsTool());            // comments (replaces set_comment)
-        registerTool(new VariablesTool());           // variables (replaces set_local_variable_type + set_function_prototype)
+        registerTool(new VariablesTool(decompilerService)); // variables (replaces set_local_variable_type + set_function_prototype)
         registerTool(new TypesTool());               // types (replaces get/set/delete/list_data_type[s])
         registerTool(new XrefsTool());               // xrefs (absorbs get_call_graph)
-        registerTool(new StructTool());              // struct (advanced struct operations)
+        registerTool(new StructTool(decompilerService)); // struct (advanced struct operations)
 
         // Register standalone tools
-        registerTool(new GetCodeTool());
+        registerTool(new GetCodeTool(decompilerService));
         registerTool(new GetBasicBlocksTool());
-        registerTool(new RenameSymbolTool());
-        registerTool(new RenameSymbolBatchTool());   // batch_rename
+        registerTool(new RenameSymbolTool(decompilerService));
+        registerTool(new RenameSymbolBatchTool(decompilerService)); // batch_rename
         registerTool(new SearchBytesTool());
         registerTool(new BookmarksTool());           // bookmarks (actions: list/set/remove)
         registerTool(new ClassTool());               // classes
@@ -303,8 +312,12 @@ public class GhidrAssistMCPBackend implements McpBackend {
             Program targetProgram = resolveTargetProgram(arguments);
 
             // Check cache for cacheable tools
+            String cacheDiscriminator = tool.isCacheable() && targetProgram != null
+                    ? tool.getCacheDiscriminator(arguments, targetProgram, this)
+                    : "";
             if (tool.isCacheable() && targetProgram != null) {
-                String cacheKey = cache.generateKey(toolName, arguments, targetProgram.getName());
+                String cacheKey = cache.generateKey(toolName, arguments, targetProgram.getName(),
+                    cacheDiscriminator);
                 McpSchema.CallToolResult cachedResult = cache.get(cacheKey, targetProgram);
                 if (cachedResult != null) {
                     Msg.info(this, "Cache hit for tool: " + toolName);
@@ -326,7 +339,8 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
             // Cache the result if tool is cacheable
             if (tool.isCacheable() && targetProgram != null) {
-                String cacheKey = cache.generateKey(toolName, arguments, targetProgram.getName());
+                String cacheKey = cache.generateKey(toolName, arguments, targetProgram.getName(),
+                    cacheDiscriminator);
                 cache.put(cacheKey, result, targetProgram);
                 Msg.debug(this, "Cached result for tool: " + toolName);
             }
@@ -411,12 +425,13 @@ public class GhidrAssistMCPBackend implements McpBackend {
      * Register built-in MCP prompts.
      */
     private void registerBuiltinPrompts() {
-        promptRegistry.registerPrompt(new AnalyzeFunctionPrompt());
-        promptRegistry.registerPrompt(new IdentifyVulnerabilityPrompt());
-        promptRegistry.registerPrompt(new DocumentFunctionPrompt());
-        promptRegistry.registerPrompt(new TraceDataFlowPrompt());
-        promptRegistry.registerPrompt(new TraceNetworkDataPrompt());
-        promptRegistry.registerPrompt(new ghidrassistmcp.prompts.CompareFunctionsPrompt());
+        promptRegistry.registerPrompt(new AnalyzeFunctionPrompt(decompilerService));
+        promptRegistry.registerPrompt(new IdentifyVulnerabilityPrompt(decompilerService));
+        promptRegistry.registerPrompt(new DocumentFunctionPrompt(decompilerService));
+        promptRegistry.registerPrompt(new TraceDataFlowPrompt(decompilerService));
+        promptRegistry.registerPrompt(new TraceNetworkDataPrompt(decompilerService));
+        promptRegistry.registerPrompt(
+            new ghidrassistmcp.prompts.CompareFunctionsPrompt(decompilerService));
         promptRegistry.registerPrompt(new ghidrassistmcp.prompts.ReverseEngineerStructPrompt());
         Msg.info(this, "Registered " + promptRegistry.getPromptCount() + " MCP prompts");
     }

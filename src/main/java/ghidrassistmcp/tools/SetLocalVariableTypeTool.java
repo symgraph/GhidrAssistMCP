@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import ghidra.app.decompiler.DecompInterface;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.DataTypeManager;
@@ -18,12 +17,20 @@ import ghidra.program.model.pcode.HighSymbol;
 import ghidra.program.model.pcode.HighVariable;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
+import ghidrassistmcp.decompiler.DecompilerService;
+import ghidrassistmcp.decompiler.DecompilerSession;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
  * MCP tool that sets the data type of a local variable within a function.
  */
 public class SetLocalVariableTypeTool implements McpTool {
+
+    private final DecompilerService decompilerService;
+
+    public SetLocalVariableTypeTool(DecompilerService decompilerService) {
+        this.decompilerService = decompilerService;
+    }
 
     @Override
     public boolean isReadOnly() {
@@ -97,11 +104,9 @@ public class SetLocalVariableTypeTool implements McpTool {
         }
         
         // Get the high function and find the variable
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(currentProgram);
-            
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(currentProgram)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
             
             if (results.isTimedOut()) {
                 return McpSchema.CallToolResult.builder()
@@ -169,8 +174,6 @@ public class SetLocalVariableTypeTool implements McpTool {
             return McpSchema.CallToolResult.builder()
                 .addTextContent("Error processing function: " + e.getMessage())
                 .build();
-        } finally {
-            decompiler.dispose();
         }
     }
     

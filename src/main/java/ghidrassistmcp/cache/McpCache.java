@@ -51,9 +51,15 @@ public class McpCache {
      * Generate a cache key for a tool call
      */
     public String generateKey(String toolName, Map<String, Object> arguments, String programName) {
+        return generateKey(toolName, arguments, programName, "");
+    }
+
+    public String generateKey(String toolName, Map<String, Object> arguments, String programName,
+            String discriminator) {
         StringBuilder keyBuilder = new StringBuilder();
         keyBuilder.append(toolName).append(":");
         keyBuilder.append(programName).append(":");
+        keyBuilder.append(discriminator != null ? discriminator : "").append(":");
 
         // Sort and serialize arguments for consistent key generation
         try {

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
+import ghidrassistmcp.decompiler.DecompilerService;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -27,6 +28,11 @@ import io.modelcontextprotocol.spec.McpSchema;
 public class RenameSymbolBatchTool implements McpTool {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final DecompilerService decompilerService;
+
+    public RenameSymbolBatchTool(DecompilerService decompilerService) {
+        this.decompilerService = decompilerService;
+    }
 
     @Override
     public boolean isReadOnly() {
@@ -158,7 +164,7 @@ public class RenameSymbolBatchTool implements McpTool {
 
             RenameSymbolCore.RenameResult r;
             try {
-                r = RenameSymbolCore.renameOne(itemArgs, currentProgram);
+                r = RenameSymbolCore.renameOne(itemArgs, currentProgram, decompilerService);
             } catch (Exception e) {
                 r = new RenameSymbolCore.RenameResult(false, "Unhandled error: " + e.getMessage());
             }
@@ -173,7 +179,8 @@ public class RenameSymbolBatchTool implements McpTool {
             List<RenameSymbolCore.VariableRenameRequest> reqs = entry.getValue();
 
             Map<Integer, RenameSymbolCore.RenameResult> perIndex =
-                RenameSymbolCore.renameVariablesBatch(currentProgram, functionName, reqs);
+                RenameSymbolCore.renameVariablesBatch(currentProgram, functionName, reqs,
+                    decompilerService);
 
             for (RenameSymbolCore.VariableRenameRequest req : reqs) {
                 ObjectNode node = itemNodes.get(req.index);
@@ -205,4 +212,3 @@ public class RenameSymbolBatchTool implements McpTool {
             .build();
     }
 }
-

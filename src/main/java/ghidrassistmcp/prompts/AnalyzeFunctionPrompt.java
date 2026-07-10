@@ -7,17 +7,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import ghidra.app.decompiler.DecompInterface;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
+import ghidrassistmcp.decompiler.DecompilerService;
+import ghidrassistmcp.decompiler.DecompilerSession;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
  * Prompt for comprehensive function analysis.
  */
 public class AnalyzeFunctionPrompt implements McpPrompt {
+
+    private final DecompilerService decompilerService;
+
+    public AnalyzeFunctionPrompt(DecompilerService decompilerService) {
+        this.decompilerService = decompilerService;
+    }
 
     @Override
     public String getName() {
@@ -154,15 +161,12 @@ public class AnalyzeFunctionPrompt implements McpPrompt {
     }
 
     private String decompileFunction(Program program, Function function) {
-        DecompInterface decompiler = new DecompInterface();
-        try {
-            decompiler.openProgram(program);
-            DecompileResults results = decompiler.decompileFunction(function, 30, TaskMonitor.DUMMY);
+        try (DecompilerSession session = decompilerService.open(program)) {
+            DecompileResults results = session.decompiler().decompileFunction(function,
+                session.options().getDefaultTimeout(), TaskMonitor.DUMMY);
             if (results.decompileCompleted()) {
                 return results.getDecompiledFunction().getC();
             }
-        } finally {
-            decompiler.dispose();
         }
         return null;
     }

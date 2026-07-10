@@ -113,4 +113,13 @@ public interface McpTool {
     default boolean isCacheable() {
         return false;
     }
+
+    /**
+     * Additional state that affects a cacheable result but is not represented by tool arguments
+     * or the program modification number.
+     */
+    default String getCacheDiscriminator(Map<String, Object> arguments, Program currentProgram,
+            GhidrAssistMCPBackend backend) {
+        return "";
+    }
 }
