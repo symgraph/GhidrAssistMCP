@@ -162,7 +162,9 @@ SSE messages:    http://127.0.0.1:8080/message
 Streamable HTTP: http://127.0.0.1:8080/mcp
 ```
 
-The headless MCP server runs inside the `analyzeHeadless` JVM and uses the loaded `currentProgram`. The server holds a program consumer while it is running so MCP requests do not race against program database closure. Use `wait=true` when you want `analyzeHeadless` to stay open for interactive MCP clients; cancel the script or terminate the process to stop the server.
+The headless MCP server runs inside the `analyzeHeadless` JVM and uses the loaded `currentProgram`. The server holds a program consumer while it is running so MCP requests do not race against program database closure. Use `wait=true` when you want `analyzeHeadless` to stay open for interactive MCP clients. A harness can also pass `completion_file=/workspace/control/session.complete`; creating that file closes the MCP server cleanly and lets Ghidra save and exit normally.
+
+Disposable static-analysis labs may pass `tool_profile=agent_lab`. This enables sandbox-local program export while arbitrary path import and Ghidra scripts remain disabled because they can expose process secrets or spawn processes. The harness owns artifact imports. Unknown profiles are rejected.
 
 ## Available Tools
 
@@ -877,7 +879,7 @@ Enable debug logging by adding to Ghidra startup:
 
 ### Code Standards
 
-- **Java 21+ features** where appropriate
+- **Java 25 baseline** for builds and runtime validation
 - **Proper exception handling** with meaningful messages
 - **Transaction safety** for all database operations
 - **Thread safety** for UI operations

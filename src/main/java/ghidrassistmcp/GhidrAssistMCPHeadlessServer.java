@@ -46,6 +46,14 @@ public class GhidrAssistMCPHeadlessServer {
      * @param port    Port to bind (typically 8080)
      */
     public synchronized void start(Program program, String host, int port) throws Exception {
+        start(program, host, port, "default");
+    }
+
+    /**
+     * Start the MCP server with a named security profile. The agent_lab profile is
+     * intended only for a disposable, container-isolated analysis environment.
+     */
+    public synchronized void start(Program program, String host, int port, String toolProfile) throws Exception {
         if (running) {
             Msg.info(this, "Headless MCP server already running, updating program");
             if (headlessBackend != null) {
@@ -56,8 +64,16 @@ public class GhidrAssistMCPHeadlessServer {
 
         Msg.info(this, "Starting headless MCP server on " + host + ":" + port);
 
+        if (!"default".equals(toolProfile) && !"agent_lab".equals(toolProfile)) {
+            throw new IllegalArgumentException("Unknown headless MCP tool profile: " + toolProfile);
+        }
+
         // Create a backend wrapper that holds the program directly
         headlessBackend = new HeadlessBackend(program);
+        if ("agent_lab".equals(toolProfile)) {
+            headlessBackend.enableAgentLabTools();
+            Msg.info(this, "Enabled sandbox-only agent lab MCP tool profile");
+        }
 
         server = new GhidrAssistMCPServer(host, port, headlessBackend);
         server.start();
@@ -163,6 +179,15 @@ public class GhidrAssistMCPHeadlessServer {
                 releaseProgram(program);
             }
             getTaskManager().shutdown();
+        }
+
+        void enableAgentLabTools() {
+            setToolEnabled("export_program", true);
+            // Importing arbitrary paths can expose process secrets, and scripts can
+            // spawn processes. The harness owns artifact import and exposes only
+            // argv-safe static CLI tools, so both remain disabled in the lab.
+            setToolEnabled("import_file", false);
+            setToolEnabled("scripts", false);
         }
 
         private void releaseProgram(Program program) {
