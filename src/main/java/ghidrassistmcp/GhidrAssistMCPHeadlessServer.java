@@ -188,6 +188,17 @@ public class GhidrAssistMCPHeadlessServer {
             // argv-safe static CLI tools, so both remain disabled in the lab.
             setToolEnabled("import_file", false);
             setToolEnabled("scripts", false);
+
+            // The harness starts this server with one analyzed program already
+            // bound to the backend. UI cursor and project lifecycle operations
+            // require CodeBrowser/FrontEnd services and are misleading in this
+            // context; list_binaries and the program analysis tools remain fully
+            // available against the bound headless program.
+            setToolEnabled("open_program", false);
+            setToolEnabled("close_program", false);
+            setToolEnabled("project_files", false);
+            setToolEnabled("get_current_address", false);
+            setToolEnabled("get_current_function", false);
         }
 
         private void releaseProgram(Program program) {
