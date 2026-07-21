@@ -1,0 +1,5 @@
+// Pin the project name so the built extension is always named GhidrAssistMCP.
+// Without this, Gradle derives project.name from the checkout directory, which
+// build.gradle uses as the extension name - so building from a git worktree or a
+// renamed clone produces a zip that Ghidra installs under the wrong name.
+rootProject.name = 'GhidrAssistMCP'
