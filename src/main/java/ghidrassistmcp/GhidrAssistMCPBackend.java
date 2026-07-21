@@ -374,7 +374,9 @@ public class GhidrAssistMCPBackend implements McpBackend {
             try {
                 McpSchema.CallToolResult result =
                     tool.execute(arguments, targetProgram, backend, taskContext);
-                result = addActiveContextToResult(result, targetProgram);
+                // Store the raw result. The active-context banner is added once when the
+                // result is retrieved through get_task_status, which goes through the normal
+                // synchronous dispatch path. Adding it here too would duplicate the banner.
                 notifyToolResponse(toolName, result);
                 return result;
             } catch (Exception e) {
