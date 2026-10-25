@@ -34,6 +34,7 @@ import ghidrassistmcp.GhidrAssistMCPPlugin;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
 import io.modelcontextprotocol.spec.McpSchema;
+import utilities.util.FileUtilities;
 
 public class GhidraScriptsTool implements McpTool {
 
@@ -358,7 +359,7 @@ public class GhidraScriptsTool implements McpTool {
                 String.join("/", info.getCategory()),
                 nullToEmpty(info.getDescription()),
                 child.getAbsolutePath(),
-                userDir.containsPath(child)));
+                FileUtilities.isPathContainedWithin(userDir.getFile(false), child.getFile(false))));
         }
     }
 
