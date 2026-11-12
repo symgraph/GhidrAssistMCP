@@ -66,7 +66,7 @@ public class RenameSymbolBatchTool implements McpTool {
         ));
         renameItemProps.put("identifier", Map.of(
             "type", "string",
-            "description", "Target identifier (function: old function name; data: address string; variable: function name)"
+            "description", "Target identifier (function: name, qualified name, or entry/containing address; use an address when names repeat; data: address string; variable: function name)"
         ));
         renameItemProps.put("new_name", Map.of(
             "type", "string",
