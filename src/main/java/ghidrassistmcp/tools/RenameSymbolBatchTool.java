@@ -14,8 +14,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ghidra.program.model.listing.Program;
+import ghidra.util.task.TaskMonitor;
+import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
+import ghidrassistmcp.tasks.McpTask;
+import ghidrassistmcp.tasks.McpTaskMonitor;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -37,6 +41,11 @@ public class RenameSymbolBatchTool implements McpTool {
     @Override
     public boolean isReadOnly() {
         return false;
+    }
+
+    @Override
+    public boolean supportsRequestMonitoring() {
+        return true;
     }
 
     @Override
@@ -93,8 +102,20 @@ public class RenameSymbolBatchTool implements McpTool {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
+        return execute(arguments, currentProgram, TaskMonitor.DUMMY);
+    }
+
+    @Override
+    public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram,
+            GhidrAssistMCPBackend backend, McpTask task) {
+        return execute(arguments, currentProgram, task == null ? TaskMonitor.DUMMY
+            : new McpTaskMonitor(task, 0, 100, "Renaming symbols"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram,
+            TaskMonitor monitor) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
                 .addTextContent("No program currently loaded")
@@ -109,6 +130,8 @@ public class RenameSymbolBatchTool implements McpTool {
         }
 
         List<?> renames = (List<?>) renamesObj;
+        monitor.initialize(renames.size());
+        int completed = 0;
 
         ObjectNode root = objectMapper.createObjectNode();
         root.put("program", currentProgram.getName());
@@ -121,6 +144,7 @@ public class RenameSymbolBatchTool implements McpTool {
         Map<String, List<RenameSymbolCore.VariableRenameRequest>> variableRenamesByFunction = new HashMap<>();
 
         for (int i = 0; i < renames.size(); i++) {
+            monitor.setMessage("Renaming item " + (i + 1) + " of " + renames.size());
             ObjectNode itemResult = objectMapper.createObjectNode();
             itemResult.put("index", i);
             itemNodes.add(itemResult);
@@ -130,6 +154,7 @@ public class RenameSymbolBatchTool implements McpTool {
             if (!(item instanceof Map<?, ?>)) {
                 itemResult.put("success", false);
                 itemResult.put("message", "Item is not an object/map");
+                completed = completeItem(monitor, completed, i, renames.size());
                 continue;
             }
 
@@ -139,6 +164,7 @@ public class RenameSymbolBatchTool implements McpTool {
             } catch (ClassCastException cce) {
                 itemResult.put("success", false);
                 itemResult.put("message", "Item is not a valid object/map");
+                completed = completeItem(monitor, completed, i, renames.size());
                 continue;
             }
 
@@ -171,12 +197,14 @@ public class RenameSymbolBatchTool implements McpTool {
 
             itemResult.put("success", r.success);
             itemResult.put("message", r.message);
+            completed = completeItem(monitor, completed, i, renames.size());
         }
 
         // Apply variable renames in batches per function (one decompile pass per function).
         for (Map.Entry<String, List<RenameSymbolCore.VariableRenameRequest>> entry : variableRenamesByFunction.entrySet()) {
             String functionName = entry.getKey();
             List<RenameSymbolCore.VariableRenameRequest> reqs = entry.getValue();
+            monitor.setMessage("Renaming variables in " + functionName);
 
             Map<Integer, RenameSymbolCore.RenameResult> perIndex =
                 RenameSymbolCore.renameVariablesBatch(currentProgram, functionName, reqs,
@@ -190,6 +218,7 @@ public class RenameSymbolBatchTool implements McpTool {
                 }
                 node.put("success", r.success);
                 node.put("message", r.message);
+                completed = completeItem(monitor, completed, req.index, renames.size());
             }
         }
 
@@ -210,5 +239,11 @@ public class RenameSymbolBatchTool implements McpTool {
         return McpSchema.CallToolResult.builder()
             .addTextContent(root.toPrettyString())
             .build();
+    }
+
+    private static int completeItem(TaskMonitor monitor, int completed, int index, int total) {
+        monitor.setMessage("Completed " + (completed + 1) + " of " + total + " renames (item " + (index + 1) + ")");
+        monitor.setProgress(completed + 1);
+        return completed + 1;
     }
 }

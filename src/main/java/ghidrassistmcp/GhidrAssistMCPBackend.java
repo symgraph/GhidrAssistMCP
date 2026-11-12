@@ -17,6 +17,7 @@ import java.util.function.Function;
 import ghidra.framework.model.DomainFile;
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
+import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.cache.McpCache;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.prompts.AnalyzeFunctionPrompt;
@@ -339,6 +340,24 @@ public class GhidrAssistMCPBackend implements McpBackend {
     
     @Override
     public McpSchema.CallToolResult callTool(String toolName, Map<String, Object> arguments) {
+        return callToolInternal(toolName, arguments, null);
+    }
+
+    @Override
+    public boolean supportsRequestMonitoring(String toolName) {
+        McpTool tool = tools.get(toolName);
+        if (tool == null) tool = legacyAliases.get(toolName);
+        return tool != null && tool.supportsRequestMonitoring();
+    }
+
+    @Override
+    public McpSchema.CallToolResult callToolMonitored(String toolName,
+            Map<String, Object> arguments, TaskMonitor monitor) {
+        return callToolInternal(toolName, arguments, Objects.requireNonNull(monitor));
+    }
+
+    private McpSchema.CallToolResult callToolInternal(String toolName,
+            Map<String, Object> arguments, TaskMonitor requestMonitor) {
         arguments = arguments == null ? Map.of() :
             Collections.unmodifiableMap(new LinkedHashMap<>(arguments));
         McpTool tool = tools.get(toolName);
@@ -351,6 +370,10 @@ public class GhidrAssistMCPBackend implements McpBackend {
                 .addTextContent("Tool not found: " + toolName)
                 .isError(true)
                 .build();
+        }
+
+        if (requestMonitor != null && !tool.supportsRequestMonitoring()) {
+            return errorResult("Tool does not support request monitoring: " + toolName);
         }
 
         // Check if tool is enabled
@@ -410,7 +433,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
             }
 
             // Check if this is a long-running tool that should be executed asynchronously
-            if (tool.isLongRunning() && asyncExecutionEnabled) {
+            if (requestMonitor == null && tool.isLongRunning() && asyncExecutionEnabled) {
                 return executeToolAsync(tool, toolName, arguments,
                     tool.requiresProgramContext(arguments) ? targetProgram : null);
             }
@@ -418,8 +441,10 @@ public class GhidrAssistMCPBackend implements McpBackend {
             // Execute synchronously for normal tools
             long modificationNumber = tool.isCacheable() && targetProgram != null
                     ? targetProgram.getModificationNumber() : 0;
-            McpSchema.CallToolResult result = normalizeLegacyResult(tool,
-                tool.execute(arguments, targetProgram, this), arguments);
+            McpSchema.CallToolResult rawResult = requestMonitor == null
+                ? tool.execute(arguments, targetProgram, this)
+                : tool.executeMonitored(arguments, targetProgram, this, requestMonitor);
+            McpSchema.CallToolResult result = normalizeLegacyResult(tool, rawResult, arguments);
 
             // Cache raw successful results only while the program revision remains stable.
             if (tool.isCacheable() && targetProgram != null && result != null

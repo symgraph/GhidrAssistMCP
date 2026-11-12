@@ -4,9 +4,12 @@
 package ghidrassistmcp;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import ghidra.program.model.listing.Program;
+import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.tasks.McpTask;
+import ghidrassistmcp.tasks.McpProgramContext;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -75,6 +78,41 @@ public interface McpTool {
         return execute(arguments, currentProgram, backend);
     }
 
+    /** Whether protocol calls return the full result in flight, with optional progress notifications. */
+    default boolean supportsRequestMonitoring() { return false; }
+
+    /** Execute in the originating request; the owning worker retains all program leases. */
+    default McpSchema.CallToolResult executeMonitored(Map<String, Object> arguments,
+            Program currentProgram, GhidrAssistMCPBackend backend, TaskMonitor monitor) {
+        // This carrier is deliberately not submitted to the task manager: existing
+        // task-aware tools can publish progress while the original RPC stays open.
+        AtomicBoolean forwarding = new AtomicBoolean(true);
+        McpTask progress = new McpTask(getName(), arguments, backend == null
+                ? McpProgramContext.empty() : backend.captureProgramContext(currentProgram)) {
+            @Override public synchronized void updateProgress(int percent, String message) {
+                if (!forwarding.get() || getStatus() != Status.RUNNING) return;
+                super.updateProgress(percent, message);
+                monitor.setMessage(message);
+                monitor.setProgress(getProgressPercent());
+            }
+        };
+        progress.markStarted();
+        monitor.initialize(100);
+        try {
+            McpSchema.CallToolResult result = execute(arguments, currentProgram, backend, progress);
+            synchronized (progress) { forwarding.set(false); }
+            // A returned tool error still means the work has finished; let the backend
+            // preserve its error/result contract. Exceptions do not invent completion.
+            if (result != null) {
+                monitor.setMessage(Boolean.TRUE.equals(result.isError()) ? "Finished with errors" : "Completed");
+                monitor.setProgress(100);
+            }
+            return result;
+        } finally {
+            synchronized (progress) { forwarding.set(false); }
+        }
+    }
+
     // ==================== MCP 2025-11-25 Tool Annotations ====================
 
     /**
@@ -117,7 +155,8 @@ public interface McpTool {
 
     /**
      * Indicates whether the tool is potentially long-running and should be executed asynchronously.
-     * Long-running tools return a task ID immediately and execute in the background.
+     * Legacy dispatch returns a task ID immediately and executes in the background.
+     * Protocol calls to tools supporting request monitoring instead stay in flight.
      * Default: false
      */
     default boolean isLongRunning() {
