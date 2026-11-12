@@ -56,6 +56,7 @@ import ghidrassistmcp.tools.OpenProgramTool;
 import ghidrassistmcp.tools.ProjectFilesTool;
 import ghidrassistmcp.tools.ExportProgramTool;
 import ghidrassistmcp.tools.GetCodeTool;
+import ghidrassistmcp.tools.GetPseudocodeBatchTool;
 import ghidrassistmcp.tools.GetCurrentAddressTool;
 import ghidrassistmcp.tools.GetCurrentFunctionTool;
 import ghidrassistmcp.tools.GetEntryPointsTool;
@@ -161,6 +162,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
         // Register standalone tools
         registerTool(new GetCodeTool(decompilerService));
+        registerTool(new GetPseudocodeBatchTool(decompilerService));
         registerTool(new GetBasicBlocksTool());
         registerTool(new RenameSymbolTool(decompilerService));
         registerTool(new RenameSymbolBatchTool(decompilerService)); // batch_rename
