@@ -3,9 +3,14 @@ package ghidrassistmcp.tools;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
+import ghidrassistmcp.GhidrAssistMCPBackend;
+import ghidrassistmcp.tasks.McpTask;
+import ghidra.util.task.TaskMonitorAdapter;
 import io.modelcontextprotocol.spec.McpSchema;
 
 class ExplicitToolTest {
@@ -51,6 +56,39 @@ class ExplicitToolTest {
             .parameters("comment").required("comment").mutation(false, true);
         assertFalse(Boolean.TRUE.equals(writer.execute(Map.of("comment", ""), null).isError()));
         assertEquals(Map.of("comment", ""), implementation.lastArguments);
+    }
+
+    @Test void monitoredExecutionPreservesDelegateOptInValidationAliasesAndFixedArguments() {
+        AtomicReference<Map<String, Object>> received = new AtomicReference<>();
+        AtomicInteger calls = new AtomicInteger();
+        McpTool implementation = new McpTool() {
+            @Override public String getName() { return "legacy_analysis"; }
+            @Override public String getDescription() { return "Task-aware analysis"; }
+            @Override public boolean supportsRequestMonitoring() { return true; }
+            @Override public McpSchema.JsonSchema getInputSchema() {
+                return new McpSchema.JsonSchema("object", Map.of("target", Map.of("type", "string"),
+                    "mode", Map.of("type", "string")), List.of("target", "mode"), false, null, null);
+            }
+            @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
+                throw new AssertionError("Task-aware overload was bypassed");
+            }
+            @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program,
+                    GhidrAssistMCPBackend backend, McpTask task) {
+                calls.incrementAndGet(); received.set(args);
+                assertEquals(McpTask.Status.RUNNING, task.getStatus());
+                task.updateProgress(40, "Analyzing translated target");
+                return McpSchema.CallToolResult.builder().addTextContent("Analyzed").build();
+            }
+        };
+        ExplicitTool canonical = new ExplicitTool(implementation, "analyze_target", "Analyze target")
+            .alias("name", "target").select("mode", "changes").parameters("name").required("name");
+        assertTrue(canonical.supportsRequestMonitoring());
+        assertFalse(Boolean.TRUE.equals(canonical.executeMonitored(Map.of("name", "demo"), null,
+            null, new TaskMonitorAdapter()).isError()));
+        assertEquals(Map.of("target", "demo", "mode", "changes"), received.get());
+        assertTrue(canonical.executeMonitored(Map.of("name", "demo", "mode", "full"), null,
+            null, new TaskMonitorAdapter()).isError());
+        assertEquals(1, calls.get());
     }
 
     private static final class RecordingTool implements McpTool {

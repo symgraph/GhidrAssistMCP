@@ -246,7 +246,21 @@ Close the project after saving:
 
 Use `get_disassembly` with the same arguments for assembly. `get_function_hash` computes SHA-256 over the function's body bytes; `get_function_byte_pattern` preserves the previous masked-prefix representation. `get_function_prototype` returns the declaration and calling convention.
 
-Long-running operations return a job ID when async execution is enabled. Poll `get_task_status` with `task_id` to retrieve the result, or `cancel_task` to cancel. These tools are an application job API, separate from the optional MCP Tasks extension.
+Long-running operations normally return a job ID when async execution is enabled. Poll `get_task_status` with `task_id` to retrieve the result, or `cancel_task` to cancel. These tools are an application job API, separate from the optional MCP Tasks extension.
+
+### Native MCP progress
+
+`analyze_program` and `rename_symbols_batch` return their complete result on the original request on both HTTP transports, without `get_task_status` polling. An optional string or integer progress token in request metadata enables native progress updates:
+
+```json
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"analyze_program","arguments":{"scope":"current","mode":"changes","program_name":"/binaries/example"},"_meta":{"progressToken":"analysis-a"}}}
+```
+
+Ghidra's existing analysis progress is sent through SDK-native `notifications/progress`, correlated with the original token and mapped to 0–100 percent, including `scope="all_open"`. Batch renames advance only when an item's success or failure is settled; queued variable renames finish after their grouped decompilation and per-item transactions. Result order and partial-success reporting are preserved. Intermediate updates are coalesced; initial and final progress are preserved. Progress reaching 100 means processing finished; the final tool result still reports operation errors.
+
+Without a supported token, these tools still return their final result directly and send no progress notifications. The client's request timeout applies to the whole operation. Notifications stop before the final response, and a failed notification channel does not discard the computation. See the MCP [progress contract](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/progress).
+
+Protocol-level request cancellation is deferred; this feature does not add a `notifications/cancelled` handler. Existing application jobs still support `cancel_task`.
 
 ### Program and cursor context
 

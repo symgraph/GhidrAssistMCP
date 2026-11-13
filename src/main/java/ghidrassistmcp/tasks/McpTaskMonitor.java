@@ -157,7 +157,11 @@ public class McpTaskMonitor extends TaskMonitorAdapter {
         }
         long boundedProgress = Math.max(0, Math.min(progress, maximum));
         double fraction = maximum == 0 ? 0.0 : (double) boundedProgress / (double) maximum;
-        return minPercent + (int) Math.round((maxPercent - minPercent) * fraction);
+        int percent = minPercent + (int) Math.round((maxPercent - minPercent) * fraction);
+        // Rounding must not report this range complete while work remains. This
+        // also covers large counters whose double ratio rounds up to exactly 1.
+        return boundedProgress < maximum && minPercent < maxPercent
+            ? Math.min(percent, maxPercent - 1) : percent;
     }
 
     private String displayMessage() {

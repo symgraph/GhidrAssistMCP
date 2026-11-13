@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import ghidra.program.model.listing.Program;
+import ghidra.util.task.TaskMonitor;
 import io.modelcontextprotocol.spec.McpSchema;
 
 /**
@@ -34,6 +35,14 @@ public interface McpBackend {
      * Execute a tool with given arguments
      */
     McpSchema.CallToolResult callTool(String toolName, Map<String, Object> arguments);
+
+    /** Opt-in tools finish on the originating MCP request, with or without a progress token. */
+    default boolean supportsRequestMonitoring(String toolName) { return false; }
+
+    default McpSchema.CallToolResult callToolMonitored(String toolName,
+            Map<String, Object> arguments, TaskMonitor monitor) {
+        return callTool(toolName, arguments);
+    }
     
     /**
      * Notify backend when a program is activated
