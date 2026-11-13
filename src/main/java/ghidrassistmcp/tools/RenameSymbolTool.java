@@ -77,7 +77,7 @@ public class RenameSymbolTool implements McpTool {
                 ),
                 "identifier", Map.of(
                     "type", "string",
-                    "description", "Target identifier (function: old function name; data: address string; variable: function name)"
+                    "description", "Target identifier (function: name, qualified name, or entry/containing address; use an address when names repeat; data: address string; variable: function name)"
                 ),
                 "new_name", Map.of(
                     "type", "string",
@@ -95,6 +95,7 @@ public class RenameSymbolTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
+                .isError(true)
                 .addTextContent("No program currently loaded")
                 .build();
         }
@@ -102,6 +103,7 @@ public class RenameSymbolTool implements McpTool {
         RenameSymbolCore.RenameResult result =
             RenameSymbolCore.renameOne(arguments, currentProgram, decompilerService);
         return McpSchema.CallToolResult.builder()
+            .isError(!result.success)
             .addTextContent(result.message)
             .build();
     }
@@ -365,27 +367,13 @@ final class RenameSymbolCore {
                     Namespace targetNamespace = (Namespace) parsed[0];
                     String simpleName = (String) parsed[1];
 
-                    // Check if a function with this name already exists in the target namespace
-                    Function existingFunction = findFunctionByName(program, simpleName);
-                    if (existingFunction != null && existingFunction != targetFunction &&
-                        existingFunction.getParentNamespace().equals(targetNamespace)) {
-                        program.endTransaction(transactionID, false);
-                        resultRef.set(new RenameResult(false,
-                            "Function with name '" + simpleName + "' already exists in namespace '" +
-                                targetNamespace.getName(true) + "'"));
-                        return;
-                    }
-
-                    if (!targetNamespace.isGlobal()) {
-                        targetFunction.setParentNamespace(targetNamespace);
-                    }
-
+                    // Global is a destination too. Let Ghidra validate names: functions may
+                    // legitimately share one name (overloads, constructors, ABI variants).
+                    targetFunction.setParentNamespace(targetNamespace);
                     targetFunction.setName(simpleName, SourceType.USER_DEFINED);
+                    String resultName = targetFunction.getName(true);
                     program.endTransaction(transactionID, true);
 
-                    String resultName = targetNamespace.isGlobal()
-                        ? simpleName
-                        : targetNamespace.getName(true) + "::" + simpleName;
                     resultRef.set(new RenameResult(true,
                         "Successfully renamed function '" + oldName + "' to '" + resultName + "'"));
                 } catch (Exception e) {
