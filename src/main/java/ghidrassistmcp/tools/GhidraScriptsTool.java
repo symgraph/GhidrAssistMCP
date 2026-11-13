@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.locks.ReentrantLock;
 
 import generic.jar.ResourceFile;
 import ghidra.app.script.GhidraScript;
@@ -37,6 +39,10 @@ import io.modelcontextprotocol.spec.McpSchema;
 import utilities.util.FileUtilities;
 
 public class GhidraScriptsTool implements McpTool {
+
+    // Distinct Java scripts can compile into the same Ghidra bundle. Coordinate
+    // loading across MCP tool instances, without serializing script execution.
+    private static final ReentrantLock SCRIPT_LOAD_LOCK = new ReentrantLock();
 
     @Override
     public String getName() {
@@ -296,7 +302,8 @@ public class GhidraScriptsTool implements McpTool {
                 return textResult("No Ghidra script provider for: " + scriptFile.getName());
             }
 
-            GhidraScript script = provider.getScriptInstance(scriptFile, writer);
+            GhidraScript script = loadScriptInstance(
+                () -> provider.getScriptInstance(scriptFile, writer));
             script.setSourceFile(scriptFile);
             List<String> args = AnalysisUtils.stringList(arguments.get("args"));
             if (args != null) {
@@ -316,9 +323,21 @@ public class GhidraScriptsTool implements McpTool {
             sb.append(output);
             return textResult(sb.toString().trim());
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             Msg.error(this, "Failed to run script", e);
             return textResult("Script failed: " + e.getClass().getSimpleName() + ": " +
                 e.getMessage() + "\n\nOutput before failure:\n" + output);
+        }
+    }
+
+    static GhidraScript loadScriptInstance(Callable<GhidraScript> loader) throws Exception {
+        SCRIPT_LOAD_LOCK.lockInterruptibly();
+        try {
+            return loader.call();
+        } finally {
+            SCRIPT_LOAD_LOCK.unlock();
         }
     }
 
