@@ -70,15 +70,6 @@ public class GetTaskStatusTool implements McpTool {
                 .build();
         }
 
-        // If task is completed, return the actual result
-        if (task.getStatus() == McpTask.Status.COMPLETED && task.getResult() != null) {
-            return task.getResult();
-        }
-
-        // Otherwise return status summary
-        return McpSchema.CallToolResult.builder()
-            .isError(task.getStatus() == McpTask.Status.FAILED || task.getStatus() == McpTask.Status.CANCELLED)
-            .addTextContent(task.toSummary())
-            .build();
+        return taskManager.getTaskResult(taskId);
     }
 }
