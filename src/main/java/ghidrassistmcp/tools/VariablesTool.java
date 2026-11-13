@@ -15,12 +15,14 @@ import javax.swing.SwingUtilities;
 import ghidra.app.cmd.function.ApplyFunctionSignatureCmd;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.app.util.parser.FunctionSignatureParser;
+import ghidra.framework.cmd.BackgroundCommand;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.data.DataType;
 import ghidra.program.model.data.DataTypeManager;
 import ghidra.program.model.data.FunctionDefinitionDataType;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.lang.CompilerSpec;
 import ghidra.program.model.pcode.HighFunction;
 import ghidra.program.model.pcode.HighSymbol;
 import ghidra.program.model.pcode.HighVariable;
@@ -35,9 +37,21 @@ import io.modelcontextprotocol.spec.McpSchema;
 public class VariablesTool implements McpTool {
 
     private final DecompilerService decompilerService;
+    private final PrototypeParser prototypeParser;
+    private final SignatureCommandFactory signatureCommandFactory;
 
     public VariablesTool(DecompilerService decompilerService) {
+        this(decompilerService,
+            (program, prototype) -> new FunctionSignatureParser(program.getDataTypeManager(), null)
+                .parse(null, prototype),
+            (address, signature) -> new ApplyFunctionSignatureCmd(address, signature, SourceType.USER_DEFINED));
+    }
+
+    VariablesTool(DecompilerService decompilerService, PrototypeParser prototypeParser,
+            SignatureCommandFactory signatureCommandFactory) {
         this.decompilerService = decompilerService;
+        this.prototypeParser = prototypeParser;
+        this.signatureCommandFactory = signatureCommandFactory;
     }
 
     @Override
@@ -320,13 +334,15 @@ public class VariablesTool implements McpTool {
 
                 int txId = program.startTransaction("Set function prototype");
                 try {
-                    DataTypeManager dtm = program.getDataTypeManager();
-                    FunctionSignatureParser parser = new FunctionSignatureParser(dtm, null);
-                    FunctionDefinitionDataType sig = parser.parse(null, prototype);
+                    CompilerSpec compiler = program.getCompilerSpec();
+                    PrototypeCallingConvention.Declaration declaration =
+                        PrototypeCallingConvention.extract(compiler, prototype);
+                    FunctionDefinitionDataType sig = prototypeParser.parse(program, declaration.prototype());
                     if (sig == null) { errorMessage.append("Failed to parse prototype"); return; }
+                    sig.setCallingConvention(PrototypeCallingConvention.resolve(compiler,
+                        func.getCallingConventionName(), declaration.callingConvention()));
 
-                    ApplyFunctionSignatureCmd cmd = new ApplyFunctionSignatureCmd(
-                        addr, sig, SourceType.USER_DEFINED);
+                    BackgroundCommand<Program> cmd = signatureCommandFactory.create(addr, sig);
                     if (cmd.applyTo(program, new ConsoleTaskMonitor())) {
                         success.set(true);
                     } else {
@@ -342,9 +358,19 @@ public class VariablesTool implements McpTool {
             return result("Failed on Swing thread: " + e.getMessage());
         }
 
-        return result(success.get() ?
+        return McpSchema.CallToolResult.builder().addTextContent(success.get() ?
             "Successfully set function prototype: " + prototype :
-            "Failed: " + errorMessage.toString());
+            "Failed: " + errorMessage.toString()).isError(!success.get()).build();
+    }
+
+    @FunctionalInterface
+    interface PrototypeParser {
+        FunctionDefinitionDataType parse(Program program, String prototype) throws Exception;
+    }
+
+    @FunctionalInterface
+    interface SignatureCommandFactory {
+        BackgroundCommand<Program> create(Address address, FunctionDefinitionDataType signature);
     }
 
     private Function findFunction(Program program, String name) {
