@@ -237,7 +237,7 @@ public class RenameSymbolBatchTool implements McpTool {
         root.set("results", results);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(root.toPrettyString())
+            .addTextContent(root.toString())
             .build();
     }
 
