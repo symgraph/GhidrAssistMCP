@@ -348,6 +348,11 @@ class RenameSymbolBatchProgressTest {
                 case "getName" -> names.get(address);
                 case "getEntryPoint" -> address;
                 case "getParentNamespace" -> global;
+                case "setParentNamespace" -> {
+                    assertTrue(SwingUtilities.isEventDispatchThread());
+                    assertSame(global, args[0]);
+                    yield null;
+                }
                 case "setName" -> {
                     assertTrue(SwingUtilities.isEventDispatchThread());
                     if ("reject".equals(args[0])) throw new InvalidInputException("Rejected test name");
