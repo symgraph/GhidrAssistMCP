@@ -63,7 +63,7 @@ class RenameSymbolBatchProgressTest {
         JsonNode output = result(monitored);
         assertEquals(3, output.path("failed").asInt());
         assertEquals("Item is not an object/map", output.path("results").get(0).path("message").asText());
-        assertTrue(text(monitored).contains("\n"), "Pretty JSON formatting belongs to a separate change");
+        assertEquals(output.toString(), text(monitored), "Progress must preserve compact JSON serialization");
         assertTrue(fixture.commits.isEmpty(), "Input failures must not open database transactions");
     }
 
