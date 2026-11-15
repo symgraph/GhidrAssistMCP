@@ -6,6 +6,8 @@ package ghidrassistmcp.tasks;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.modelcontextprotocol.spec.McpSchema;
 
@@ -30,6 +32,7 @@ public class McpTask {
     private final Map<String, Object> arguments;
     private final McpProgramContext programContext;
     private final Instant createdAt;
+    private final CountDownLatch completion = new CountDownLatch(1);
     private volatile Status status;
     private volatile Instant startedAt;
     private volatile Instant completedAt;
@@ -142,7 +145,6 @@ public class McpTask {
     public synchronized void markCompleted(McpSchema.CallToolResult taskResult) {
         if (this.status == Status.RUNNING || this.status == Status.PENDING) {
             boolean failed = Boolean.TRUE.equals(taskResult.isError());
-            this.status = failed ? Status.FAILED : Status.COMPLETED;
             if (failed) {
                 this.errorMessage = taskResult.content().stream()
                     .filter(McpSchema.TextContent.class::isInstance)
@@ -154,6 +156,8 @@ public class McpTask {
             this.result = taskResult;
             this.progressPercent = 100;
             this.progressMessage = failed ? "Failed: " + errorMessage : "Completed";
+            this.status = failed ? Status.FAILED : Status.COMPLETED;
+            completion.countDown();
         }
     }
 
@@ -162,10 +166,11 @@ public class McpTask {
      */
     public synchronized void markFailed(String taskErrorMessage) {
         if (this.status == Status.RUNNING || this.status == Status.PENDING) {
-            this.status = Status.FAILED;
             this.completedAt = Instant.now();
             this.errorMessage = taskErrorMessage;
             this.progressMessage = "Failed: " + taskErrorMessage;
+            this.status = Status.FAILED;
+            completion.countDown();
         }
     }
 
@@ -174,10 +179,27 @@ public class McpTask {
      */
     public synchronized void markCancelled() {
         if (this.status == Status.PENDING || this.status == Status.RUNNING) {
-            this.status = Status.CANCELLED;
             this.completedAt = Instant.now();
             this.progressMessage = "Cancelled";
+            this.status = Status.CANCELLED;
+            completion.countDown();
         }
+    }
+
+    /** Observe completion without cancelling or otherwise changing the running task. */
+    public boolean awaitCompletion(long timeoutMillis) throws InterruptedException {
+        return completion.await(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    /** Compact handle shared by submission and nonterminal status polling. */
+    public McpSchema.CallToolResult toPendingResult() {
+        String taskStatus = status.name().toLowerCase(java.util.Locale.ROOT);
+        return McpSchema.CallToolResult.builder()
+            .addTextContent("task_id=" + taskId + " status=" + taskStatus)
+            .structuredContent(Map.of("task_id", taskId, "tool", toolName,
+                "status", taskStatus,
+                "poll_interval_ms", 1000))
+            .build();
     }
 
     /**
