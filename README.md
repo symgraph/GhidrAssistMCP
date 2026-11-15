@@ -12,10 +12,11 @@ GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's co
 
 - **MCP Server Integration**: Full Model Context Protocol server implementation using official SDK
 - **Dual HTTP Transports**: Supports SSE and Streamable HTTP transports for maximum client compatibility
-- **100 Explicit Tools**: Discoverable operation names with precise input contracts and read/write annotations (93 enabled by default)
+- **101 Explicit Tools**: Discoverable operation names with precise input contracts and read/write annotations (94 enabled by default)
 - **6 MCP Resource Templates**: Program-specific data resources for program info, functions, strings, imports, exports, and segments
 - **7 MCP Prompts**: Pre-built analysis prompts for common reverse engineering tasks
 - **Result Caching**: Intelligent caching system to improve performance for repeated queries
+- **Batch Pseudocode Reads**: Decompile functions together, with full source by default and explicit line pagination
 - **Async Task Support**: Long-running operations execute asynchronously with task management
 - **Multi-Program Support**: Work with multiple open programs simultaneously using `program_name`; use `list_open_programs` project paths to disambiguate duplicate filenames
 - **Application Startup**: MCP is available as soon as the project manager opens, before CodeBrowser
@@ -105,7 +106,7 @@ supported Gradle release; use it instead of a system Gradle installation.
 
 The Configuration tab allows you to:
 
-- **View all public tools** (100 total)
+- **View all public tools** (101 total)
 - **Enable/disable individual tools** using checkboxes
 - **Save configuration** to persist across sessions
 - **Monitor tool status** in real-time
@@ -172,13 +173,13 @@ Disposable static-analysis labs may pass `tool_profile=agent_lab`. This enables 
 
 ## Available tools
 
-The public catalog contains 100 explicit tools, 93 enabled by default. [The modernization review](docs/modernization-review.md) maps every previous tool to its current name and explains the architecture and remaining improvements. Fetch `tools/list` for authoritative parameter schemas; clients should reconnect after upgrading.
+The public catalog contains 101 explicit tools, 94 enabled by default. [The modernization review](docs/modernization-review.md) maps every previous tool to its current name and explains the architecture and remaining improvements. Fetch `tools/list` for authoritative parameter schemas; clients should reconnect after upgrading.
 
 | Purpose | Representative tools |
 | --- | --- |
 | Project lifecycle | `create_project`, `open_project`, `save_project`, `close_project` |
 | Programs and project files | `get_program_info`, `list_open_programs`, `list_project_files`, `open_program`, `close_program` |
-| Code and functions | `list_functions`, `search_functions`, `get_function_info`, `get_pseudocode`, `get_disassembly`, `get_pcode`, `get_control_flow_graph` |
+| Code and functions | `list_functions`, `search_functions`, `get_function_info`, `get_pseudocode`, `get_pseudocode_batch`, `get_disassembly`, `get_pcode`, `get_control_flow_graph` |
 | Function identity | `get_function_hash` (SHA-256), `get_function_byte_pattern` (masked prefix), `get_function_prototype` (C declaration) |
 | Binary data | `list_imports`, `list_exports`, `list_strings`, `list_memory_blocks`, `list_entry_points`, `get_hexdump` |
 | References | `get_xrefs_to`, `get_xrefs_from`, `get_callers`, `get_callees`, `get_call_graph` |
@@ -246,17 +247,29 @@ Close the project after saving:
 
 Use `get_disassembly` with the same arguments for assembly. `get_function_hash` computes SHA-256 over the function's body bytes; `get_function_byte_pattern` preserves the previous masked-prefix representation. `get_function_prototype` returns the declaration and calling convention.
 
+For grouped reads, `get_pseudocode_batch` accepts a nonempty list of function names, qualified names, or addresses in one program and shares one configured decompiler session:
+
+```json
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"get_pseudocode_batch","arguments":{"functions":["0x401000","0x401080"],"program_name":"/binaries/example"},"_meta":{"progressToken":"batch-a"}}}
+```
+
+Full source is returned by default. Optional `start_line` and `max_lines` select a one-based page for each function. Every item reports its returned range, total line count, completeness, and any error. Code appears once in text content; structured content contains metadata. Use addresses to select functions whose names repeat.
+
+`get_pseudocode_batch` returns its complete result on the original request, with or without a progress token. An optional string or integer `_meta.progressToken` enables native MCP progress. Counts report completed entries and the total requested, including aliases and per-function errors; native decompiler counters cannot reset the batch count. The client timeout applies to the whole batch. See the native progress section below.
+
+Batch decompiler sessions and repeated-function results are reused within a request; batches do not enter the cross-request response cache.
+
 Long-running operations normally return a job ID when async execution is enabled. Poll `get_task_status` with `task_id` to retrieve the result, or `cancel_task` to cancel. These tools are an application job API, separate from the optional MCP Tasks extension.
 
 ### Native MCP progress
 
-`analyze_program` and `rename_symbols_batch` return their complete result on the original request on both HTTP transports, without `get_task_status` polling. An optional string or integer progress token in request metadata enables native progress updates:
+`analyze_program`, `rename_symbols_batch`, and `get_pseudocode_batch` return their complete result on the original request on both HTTP transports, without `get_task_status` polling. An optional string or integer progress token in request metadata enables native progress updates:
 
 ```json
 {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"analyze_program","arguments":{"scope":"current","mode":"changes","program_name":"/binaries/example"},"_meta":{"progressToken":"analysis-a"}}}
 ```
 
-Ghidra's existing analysis progress is sent through SDK-native `notifications/progress`, correlated with the original token and mapped to 0–100 percent, including `scope="all_open"`. Batch renames advance only when an item's success or failure is settled; queued variable renames finish after their grouped decompilation and per-item transactions. Result order and partial-success reporting are preserved. Intermediate updates are coalesced; initial and final progress are preserved. Progress reaching 100 means processing finished; the final tool result still reports operation errors.
+Ghidra's existing analysis progress is sent through SDK-native `notifications/progress`, correlated with the original token and mapped to 0–100 percent, including `scope="all_open"`. Batch renames advance only when an item's success or failure is settled; queued variable renames finish after their grouped decompilation and per-item transactions. Result order and partial-success reporting are preserved. Intermediate updates are coalesced; initial and final progress are preserved. Progress reaching its declared total means processing finished; the final tool result still reports operation errors.
 
 Without a supported token, these tools still return their final result directly and send no progress notifications. The client's request timeout applies to the whole operation. Notifications stop before the final response, and a failed notification channel does not discard the computation. See the MCP [progress contract](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/progress).
 

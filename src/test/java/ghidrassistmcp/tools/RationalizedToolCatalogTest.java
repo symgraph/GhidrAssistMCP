@@ -14,13 +14,18 @@ class RationalizedToolCatalogTest {
         try {
             var all = backend.getAllTools();
             var available = backend.getAvailableTools();
-            assertEquals(100, all.size());
-            assertEquals(93, available.size());
-            assertEquals(100, all.stream().map(McpSchema.Tool::name).distinct().count());
+            assertEquals(101, all.size());
+            assertEquals(94, available.size());
+            assertEquals(101, all.stream().map(McpSchema.Tool::name).distinct().count());
             Map<String, McpSchema.Tool> tools = available.stream().collect(Collectors.toMap(McpSchema.Tool::name, t -> t));
             Set<String> hidden = Set.of("get_code", "types", "struct", "comments", "variables", "xrefs", "classes", "bookmarks", "analysis_options", "analysis_control", "project_files", "scripts", "get_function_signature");
             assertTrue(tools.keySet().stream().noneMatch(hidden::contains));
             assertTrue(tools.get("get_pseudocode").annotations().readOnlyHint());
+            assertTrue(tools.get("get_pseudocode_batch").annotations().readOnlyHint());
+            assertTrue(tools.get("get_pseudocode_batch").annotations().idempotentHint());
+            assertNotNull(tools.get("get_pseudocode_batch").outputSchema());
+            assertTrue(((Map<?, ?>) tools.get("get_pseudocode_batch").inputSchema()
+                .get("properties")).containsKey("program_name"));
             assertTrue(tools.get("get_comment").annotations().readOnlyHint());
             assertFalse(tools.get("set_comment").annotations().readOnlyHint());
             assertTrue(tools.get("assemble_instructions").annotations().readOnlyHint());
