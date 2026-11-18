@@ -45,7 +45,7 @@ class StreamableHttpIntegrationTest {
         assertEquals(200, initialized.statusCode(), initialized.body());
         assertEquals("2025-11-25", json(initialized).path("result")
             .path("protocolVersion").asText());
-        assertEquals("3.0.0", json(initialized).path("result")
+        assertEquals("3.1.0", json(initialized).path("result")
             .path("serverInfo").path("version").asText());
         sessionId = initialized.headers().firstValue("Mcp-Session-Id").orElse(null);
         HttpResponse<String> ready = send("notifications/initialized", Map.of(), false);

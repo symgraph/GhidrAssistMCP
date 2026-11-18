@@ -48,7 +48,7 @@ task distributeExtension {
 //----------------------END "DO NOT MODIFY" SECTION-------------------------------
 
 // Product release version; extension.properties retains Ghidra's compatibility version.
-version = '3.0.0'
+version = '3.1.0'
 tasks.withType(Jar).configureEach {
     manifest {
         attributes 'Implementation-Title': project.name,

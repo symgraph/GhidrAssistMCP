@@ -4,7 +4,7 @@ A powerful Ghidra extension that provides an MCP (Model Context Protocol) server
 
 ## Overview
 
-Version **3.0.0** introduces the explicit tool catalog and application-owned runtime. Clients should refresh their tool definitions after upgrading.
+Version **3.1.0** adds batched pseudocode reads, native MCP progress, and Ghidra 12.2 compatibility. Clients should refresh their tool definitions after upgrading.
 
 GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's comprehensive reverse engineering platform. By implementing the Model Context Protocol, this extension allows external AI assistants, automated analysis tools, and custom scripts to seamlessly interact with Ghidra's analysis capabilities.
 
@@ -40,14 +40,14 @@ Shameless self-promotion: [GhidrAssist](https://github.com/jtang613/GhidrAssist)
 
 ### Prerequisites
 
-- **Ghidra 12.0 or 12.1 Public**, running with Java 25 or newer (extension ZIPs are specific to the selected Ghidra version)
+- **Ghidra 12.0, 12.1, or 12.2 Public**, running with Java 25 or newer (extension ZIPs are specific to the selected Ghidra version)
 - **An MCP Client (Like GhidrAssist)**
 
 ### Binary Release (Recommended)
 
 1. **Download the latest release**:
    - Go to the [Releases page](https://github.com/jtang613/GhidrAssistMCP/releases)
-   - Download the latest `.zip` file (e.g., `ghidra_12.1_PUBLIC_20261009_GhidrAssistMCP-3.0.0.zip`)
+   - Download the `.zip` for your Ghidra version. The filename ends in the product version (e.g., `GhidrAssistMCP-3.1.0.zip`).
 
 2. **Install the extension**:
    - In Ghidra: **File → Install Extensions → Add Extension**

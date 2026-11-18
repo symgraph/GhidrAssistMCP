@@ -767,7 +767,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
     
     @Override
     public McpSchema.Implementation getServerInfo() {
-        return new McpSchema.Implementation("ghidrassistmcp", "3.0.0");
+        return new McpSchema.Implementation("ghidrassistmcp", "3.1.0");
     }
     
     @Override

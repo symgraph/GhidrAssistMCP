@@ -10,7 +10,7 @@ Use Java 25 or newer and the Gradle version supported by the selected Ghidra ins
 GHIDRA_INSTALL_DIR=/home/jtang613/tools/ghidra_12.0_PUBLIC /opt/gradle/bin/gradle buildExtension test
 ```
 
-The product release version is `3.0.0`, declared in `build.gradle` and the backend server metadata. Keep them synchronized when bumping releases. ZIPs and jar manifests carry that version; `extension.properties.version` must retain the Ghidra compatibility token.
+The product release version is `3.1.0`, declared in `build.gradle` and the backend server metadata. Keep them synchronized when bumping releases. ZIPs and jar manifests carry that version. `extension.properties.version` must retain the Ghidra compatibility token.
 
 The extension ZIP is written to `dist/`. `installExtension` changes the Ghidra installation and user extension directories; building alone does not install it. Tests are under `src/test/java/` and use JUnit Jupiter. Include HTTP protocol tests when transport behavior changes, catalog contracts for names/schemas, and focused lifetime tests for concurrency changes.
 
