@@ -33,8 +33,10 @@ import io.modelcontextprotocol.spec.McpSchema;
 
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
+import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.prompts.McpPrompt;
 import ghidrassistmcp.resources.McpResource;
+import ghidrassistmcp.protocol.McpProgressMonitor;
 
 /**
  * Refactored MCP Server implementation that uses the backend architecture.
@@ -136,11 +138,7 @@ public class GhidrAssistMCPServer {
             for (McpSchema.Tool toolSchema : backend.getAvailableTools()) {
                 String toolName = toolSchema.name();
                 BiFunction<McpSyncServerExchange, McpSchema.CallToolRequest, McpSchema.CallToolResult> toolHandler =
-                    (exchange, request) -> {
-                        // The backend now handles all logging through event listeners
-                        Map<String, Object> params = request.arguments();
-                        return backend.callTool(toolName, params);
-                    };
+                    (exchange, request) -> callTool(toolName, exchange, request);
 
                 sseServerBuilder.toolCall(toolSchema, toolHandler);
                 streamableServerBuilder.toolCall(toolSchema, toolHandler);
@@ -295,9 +293,24 @@ public class GhidrAssistMCPServer {
             for (McpSchema.Tool tool : available) {
                 if (!existing.contains(tool.name())) {
                     server.addTool(new McpServerFeatures.SyncToolSpecification(tool,
-                        (exchange, request) -> backend.callTool(tool.name(), request.arguments())));
+                        (exchange, request) -> callTool(tool.name(), exchange, request)));
                 }
             }
+        }
+    }
+
+    /** Monitored tools return their final result on the originating protocol request. */
+    private McpSchema.CallToolResult callTool(String name, McpSyncServerExchange exchange,
+            McpSchema.CallToolRequest request) {
+        Object token = request.progressToken();
+        if (!backend.supportsRequestMonitoring(name)) {
+            return backend.callTool(name, request.arguments());
+        }
+        if (!McpProgressMonitor.supportsToken(token)) {
+            return backend.callToolMonitored(name, request.arguments(), TaskMonitor.DUMMY);
+        }
+        try (McpProgressMonitor monitor = new McpProgressMonitor(token, exchange::progressNotification)) {
+            return backend.callToolMonitored(name, request.arguments(), monitor);
         }
     }
 

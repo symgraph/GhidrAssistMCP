@@ -1,6 +1,7 @@
 package ghidrassistmcp.tasks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,6 +81,49 @@ class McpTaskManagerTest {
         assertTrue(released.await(2, TimeUnit.SECONDS));
         assertEquals(McpTask.Status.FAILED, task.getStatus());
         assertSame(error, manager.getTaskResult(task.getTaskId()));
+        assertTrue(task.awaitCompletion(0));
+    }
+
+    @Test
+    void completionObservationTimeoutLeavesTheOriginalExecutionAndLeaseAlive() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch released = new CountDownLatch(1);
+        AtomicInteger executions = new AtomicInteger();
+        McpSchema.CallToolResult result = success();
+        McpTask task = manager.submitTask("observed", Map.of(), McpProgramContext.empty(), ignored -> {
+            executions.incrementAndGet();
+            entered.countDown();
+            awaitUninterruptibly(releaseWorker);
+            return result;
+        }, released::countDown);
+        assertTrue(entered.await(2, TimeUnit.SECONDS));
+
+        assertFalse(task.awaitCompletion(1));
+        assertEquals(McpTask.Status.RUNNING, task.getStatus());
+        assertSame(task, manager.getTask(task.getTaskId()));
+        assertEquals(1, executions.get());
+        assertEquals(1, released.getCount());
+        var pending = manager.getTaskResult(task.getTaskId());
+        assertEquals(task.getTaskId(), ((Map<?, ?>) pending.structuredContent()).get("task_id"));
+
+        releaseWorker.countDown();
+        assertTrue(task.awaitCompletion(2000));
+        assertTrue(released.await(2, TimeUnit.SECONDS));
+        assertSame(result, manager.getTaskResult(task.getTaskId()));
+        assertEquals(1, executions.get());
+    }
+
+    @Test
+    void everyTerminalTransitionReleasesCompletionObservers() throws Exception {
+        McpTask completed = new McpTask("complete", Map.of());
+        completed.markCompleted(success());
+        assertTrue(completed.awaitCompletion(0));
+        McpTask failed = new McpTask("failed", Map.of());
+        failed.markFailed("failure");
+        assertTrue(failed.awaitCompletion(0));
+        McpTask cancelled = new McpTask("cancelled", Map.of());
+        cancelled.markCancelled();
+        assertTrue(cancelled.awaitCompletion(0));
     }
 
     @Test

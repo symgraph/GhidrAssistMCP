@@ -206,9 +206,7 @@ public class McpTaskManager {
         }
 
         if (!task.isTerminal()) {
-            return McpSchema.CallToolResult.builder()
-                .addTextContent("Task is still running.\n" + task.toSummary())
-                .build();
+            return task.toPendingResult();
         }
 
         if (task.getStatus() == McpTask.Status.COMPLETED && task.getResult() != null) {

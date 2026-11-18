@@ -65,6 +65,7 @@ public final class ExplicitTool implements McpTool {
     @Override public boolean isIdempotent() { return idempotent; }
     @Override public boolean isOpenWorld() { return delegate.isOpenWorld(); }
     @Override public boolean isLongRunning() { return longRunning; }
+    @Override public boolean supportsRequestMonitoring() { return delegate.supportsRequestMonitoring(); }
     @Override public boolean isCacheable() { return readOnly && delegate.isCacheable(); }
     @Override public boolean supportsProgramSelection() { return programSelection; }
     @Override public boolean requiresProgramContext() { return programContext; }

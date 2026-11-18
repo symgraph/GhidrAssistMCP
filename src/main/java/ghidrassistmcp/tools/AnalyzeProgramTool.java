@@ -16,6 +16,8 @@ import io.modelcontextprotocol.spec.McpSchema;
 
 public class AnalyzeProgramTool implements McpTool {
 
+    @Override public boolean supportsRequestMonitoring() { return true; }
+
     @Override
     public String getName() {
         return "analyze_program";

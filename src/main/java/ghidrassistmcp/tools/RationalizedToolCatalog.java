@@ -21,6 +21,10 @@ public final class RationalizedToolCatalog {
     public static List<McpTool> rationalize(Collection<McpTool> originals) {
         RationalizedToolCatalog c = new RationalizedToolCatalog(originals);
         c.build();
+        // This tool already exposes its canonical contract, including its output schema.
+        McpTool batchPseudocode = c.originals.get("get_pseudocode_batch");
+        if (batchPseudocode == null) throw new IllegalArgumentException("Missing original tool: get_pseudocode_batch");
+        c.tools.add(batchPseudocode);
         c.tools.add(new GetFunctionHashTool());
         c.tools.add(new GetFunctionPrototypeTool());
         for (ProjectControlTool.Operation operation : ProjectControlTool.Operation.values()) {
@@ -98,7 +102,7 @@ public final class RationalizedToolCatalog {
         action("struct", "rename_field", "rename_structure_field", "Rename a structure field, identified by old_field_name or its byte offset.").parameters("structure_name", "old_field_name", "offset", "new_field_name").required("structure_name", "new_field_name").oneOfParameters("old_field_name", "offset").mutation(false, false).longRunning(false);
         action("struct", "field_xrefs", "get_structure_field_xrefs", "Find decompiler and optional instance references to a structure field, identified by field_name or field_offset, with pagination.").parameters("structure_name", "field_name", "field_offset", "instance_address", "offset", "limit").required("structure_name").oneOfParameters("field_name", "field_offset").readOnly();
 
-        tool("get_code", "get_pseudocode", "Decompile a function into C-like pseudocode. Use this to understand high-level function behavior.").select("format", "decompiler").parameters("function").required("function").readOnly();
+        tool("get_code", "get_pseudocode", "Decompile one function into C-like pseudocode. Prefer get_pseudocode_batch for grouped reads.").select("format", "decompiler").parameters("function").required("function").readOnly();
         tool("get_code", "get_disassembly", "Read existing assembly instructions and EOL comments for a function. This does not define or change instructions.").select("format", "disassembly").parameters("function").required("function").readOnly().longRunning(false);
         tool("get_code", "get_pcode", "Get decompiler P-code operations for a function; raw selects a flat operation list instead of basic-block grouping.").select("format", "pcode").parameters("function", "raw").required("function").readOnly();
         tool("get_basic_blocks", "get_control_flow_graph", "Get a function's basic blocks with predecessor/successor control-flow edges.").readOnly();
