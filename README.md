@@ -11,7 +11,7 @@ GhidrAssistMCP bridges the gap between AI-powered analysis tools and Ghidra's co
 ### Key Features
 
 - **MCP Server Integration**: Full Model Context Protocol server implementation using official SDK
-- **Dual HTTP Transports**: Supports SSE and Streamable HTTP transports for maximum client compatibility
+- **Stateless Streamable HTTP**: MCP `2026-07-28` at `/mcp`; every request is self-contained, with no session to establish
 - **101 Explicit Tools**: Discoverable operation names with precise input contracts and read/write annotations (94 enabled by default)
 - **6 MCP Resource Templates**: Program-specific data resources for program info, functions, strings, imports, exports, and segments
 - **7 MCP Prompts**: Pre-built analysis prompts for common reverse engineering tasks
@@ -162,9 +162,7 @@ To keep a headless MCP session open after analysis completes, run the server as 
 MCP clients can connect to:
 
 ```text
-SSE:             http://127.0.0.1:8080/sse
-SSE messages:    http://127.0.0.1:8080/message
-Streamable HTTP: http://127.0.0.1:8080/mcp
+http://127.0.0.1:8080/mcp
 ```
 
 The headless MCP server runs inside the `analyzeHeadless` JVM and uses the loaded `currentProgram`. The server holds a program consumer while it is running so MCP requests do not race against program database closure. Use `wait=true` when you want `analyzeHeadless` to stay open for interactive MCP clients. A harness can also pass `completion_file=/workspace/control/session.complete`; creating that file closes the MCP server cleanly and lets Ghidra save and exit normally.
@@ -263,15 +261,15 @@ Long-running operations normally return a job ID when async execution is enabled
 
 ### Native MCP progress
 
-`analyze_program`, `rename_symbols_batch`, and `get_pseudocode_batch` return their complete result on the original request on both HTTP transports, without `get_task_status` polling. An optional string or integer progress token in request metadata enables native progress updates:
+`analyze_program`, `rename_symbols_batch`, and `get_pseudocode_batch` return their complete result on the original request, without `get_task_status` polling. An optional string or integer progress token in request metadata enables native progress updates:
 
 ```json
-{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"analyze_program","arguments":{"scope":"current","mode":"changes","program_name":"/binaries/example"},"_meta":{"progressToken":"analysis-a"}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"analyze_program","arguments":{"scope":"current","mode":"changes","program_name":"/binaries/example"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"progressToken":"analysis-a"}}}
 ```
 
-Ghidra's existing analysis progress is sent through SDK-native `notifications/progress`, correlated with the original token and mapped to 0–100 percent, including `scope="all_open"`. Batch renames advance only when an item's success or failure is settled; queued variable renames finish after their grouped decompilation and per-item transactions. Result order and partial-success reporting are preserved. Intermediate updates are coalesced; initial and final progress are preserved. Progress reaching its declared total means processing finished; the final tool result still reports operation errors.
+A request with a token is answered as an event stream: `notifications/progress` messages followed by the final result. Ghidra's existing analysis progress is sent through these SDK-native notifications, correlated with the original token and mapped to 0–100 percent, including `scope="all_open"`. Batch renames advance only when an item's success or failure is settled; queued variable renames finish after their grouped decompilation and per-item transactions. Result order and partial-success reporting are preserved. Intermediate updates are coalesced; initial and final progress are preserved. Progress reaching its declared total means processing finished; the final tool result still reports operation errors.
 
-Without a supported token, these tools still return their final result directly and send no progress notifications. The client's request timeout applies to the whole operation. Notifications stop before the final response, and a failed notification channel does not discard the computation. See the MCP [progress contract](https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/progress).
+Without a supported token, these tools still return their final result directly and send no progress notifications. The client's request timeout applies to the whole operation. Notifications stop before the final response, and a failed notification channel does not discard the computation. See the MCP [progress contract](https://modelcontextprotocol.io/specification/2026-07-28/basic/utilities/progress).
 
 Protocol-level request cancellation is deferred; this feature does not add a `notifications/cancelled` handler. Existing application jobs still support `cancel_task`.
 
@@ -295,9 +293,11 @@ The module initializer attaches the project-manager application plugin, includin
 
 ## MCP protocol support
 
-The extension uses Java SDK 2.0.1. Streamable HTTP at `http://localhost:8080/mcp` supports protocol `2025-11-25` and is the preferred endpoint. Legacy SSE at `/sse` and messages at `/message` use protocol `2024-11-05`. Tool availability changes are delivered without restarting the transport, and resource URI patterns are registered as resource templates.
+The extension uses Java SDK 2.2.0's stateless server for MCP `2026-07-28` at `http://localhost:8080/mcp`. Each request carries its protocol version and client capabilities in `_meta`, along with the mirrored `Mcp-Method`, `MCP-Protocol-Version`, and (for named calls) `Mcp-Name` headers; `server/discover` reports the supported version, capabilities, and instructions. There is no `initialize` handshake or session.
 
-The latest MCP revision is `2026-07-28`; full support depends on the Java SDK's next major line. See the [official SDK roadmap](https://github.com/modelcontextprotocol/java-sdk/blob/main/ROADMAP.md). The implementation and follow-up plan are detailed in [the review](docs/modernization-review.md).
+Clients on earlier revisions (`2025-11-25` and before) are not supported. Their `initialize` request is answered with error `-32022`, listing `2026-07-28` as the supported version. The legacy SSE endpoints `/sse` and `/message` have been removed.
+
+`tools/list` reads the live catalog, so tool-setting changes apply to the next request. Clients that hold a `subscriptions/listen` stream with `toolsListChanged` receive `notifications/tools/list_changed` when settings change. Resource URI patterns are registered as resource templates. The implementation and follow-up plan are detailed in [the review](docs/modernization-review.md).
 
 Six program resource templates expose metadata, functions, strings, imports, exports, and segments. Seven prompts cover function analysis, documentation, data flow, network data, defensive vulnerability review, comparison, and structure inference. Prompt guidance uses the explicit tool catalog.
 
@@ -387,8 +387,8 @@ src/main/java/ghidrassistmcp/
 
 ### Dependencies
 
-- **MCP SDK**: `io.modelcontextprotocol.sdk:mcp-core:2.0.1` and `mcp-json-jackson2:2.0.1`
-- **Jetty Server**: `12.1.14` with EE11 servlet support (HTTP/SSE transport)
+- **MCP SDK**: `io.modelcontextprotocol.sdk:mcp-core:2.2.0` and `mcp-json-jackson2:2.2.0`
+- **Jetty Server**: `12.1.14` with EE11 servlet support (stateless HTTP transport)
 - **Jackson**: `2.21.1` (annotations `2.21`) (JSON processing)
 - **Ghidra API**: Bundled with Ghidra installation
 
@@ -436,7 +436,13 @@ Detailed logging in Ghidra's console:
 #### MCP Client Connection Issues
 
 - Confirm server is running (check GhidrAssistMCP window)
-- Test connection: `curl http://localhost:8080/sse`
+- Test connection:
+  ```bash
+  curl -s http://localhost:8080/mcp -H 'Content-Type: application/json' \
+    -H 'Mcp-Method: server/discover' -H 'MCP-Protocol-Version: 2026-07-28' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
+  ```
+- A `-32022` "Unsupported protocol version" error means the client predates MCP `2026-07-28`; upgrade the client
 - Check firewall settings
 
 #### Tool Execution Failures
