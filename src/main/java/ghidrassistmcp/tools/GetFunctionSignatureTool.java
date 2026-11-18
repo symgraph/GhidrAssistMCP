@@ -7,10 +7,11 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 import java.util.List;
 import java.util.Map;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class GetFunctionSignatureTool implements McpTool {
 
@@ -30,8 +31,8 @@ public class GetFunctionSignatureTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema(
+    public JsonSchema getInputSchema() {
+        return new JsonSchema(
             "object",
             Map.of(
                 "function_name_or_address",
@@ -48,21 +49,21 @@ public class GetFunctionSignatureTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String identifier = (String) arguments.get("function_name_or_address");
         if (identifier == null || identifier.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("function_name_or_address is required")
+                .addContent(McpSchema.TextContent.builder("function_name_or_address is required").build())
                 .build();
         }
 
         Function function = findFunction(currentProgram, identifier);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + identifier)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + identifier).build())
                 .build();
         }
 
@@ -80,7 +81,7 @@ public class GetFunctionSignatureTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

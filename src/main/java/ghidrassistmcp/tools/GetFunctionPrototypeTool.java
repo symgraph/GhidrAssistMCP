@@ -7,7 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** Read a function declaration without confusing it with a byte fingerprint. */
 public final class GetFunctionPrototypeTool implements McpTool {
@@ -18,8 +19,8 @@ public final class GetFunctionPrototypeTool implements McpTool {
     @Override public String getDescription() {
         return "Get a function's C prototype, return type, calling convention, and parameter count. This is its declaration, not a byte pattern or hash.";
     }
-    @Override public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", Map.of("function", Map.of("type", "string",
+    @Override public JsonSchema getInputSchema() {
+        return new JsonSchema("object", Map.of("function", Map.of("type", "string",
             "description", "Function name, qualified name, entry address, or address inside its body")),
             List.of("function"), false, null, null);
     }
@@ -46,12 +47,12 @@ public final class GetFunctionPrototypeTool implements McpTool {
                 "return_type", function.getReturnType().getDisplayName(),
                 "parameter_count", function.getParameterCount());
             return McpSchema.CallToolResult.builder().structuredContent(result)
-                .addTextContent(new ObjectMapper().writeValueAsString(result)).build();
+                .addContent(McpSchema.TextContent.builder(new ObjectMapper().writeValueAsString(result)).build()).build();
         } catch (Exception e) {
             return error("Error reading function prototype: " + e.getMessage());
         }
     }
     private static McpSchema.CallToolResult error(String text) {
-        return McpSchema.CallToolResult.builder().isError(true).addTextContent(text).build();
+        return McpSchema.CallToolResult.builder().isError(true).addContent(McpSchema.TextContent.builder(text).build()).build();
     }
 }

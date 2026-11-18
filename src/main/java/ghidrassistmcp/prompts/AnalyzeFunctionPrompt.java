@@ -13,7 +13,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Prompt for comprehensive function analysis.
@@ -39,11 +39,7 @@ public class AnalyzeFunctionPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument(
-                "function_name",
-                "Name or address of the function to analyze",
-                true
-            )
+            McpSchema.PromptArgument.builder("function_name").description("Name or address of the function to analyze").required(true).build()
         );
     }
 
@@ -52,13 +48,10 @@ public class AnalyzeFunctionPrompt implements McpPrompt {
         String functionIdentifier = arguments.get("function_name");
 
         if (functionIdentifier == null || functionIdentifier.isEmpty()) {
-            return new McpSchema.GetPromptResult(
-                "Error: function_name argument is required",
-                List.of(new McpSchema.PromptMessage(
+            return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(
                     McpSchema.Role.USER,
-                    new McpSchema.TextContent("Error: function_name argument is required")
-                ))
-            );
+                    McpSchema.TextContent.builder("Error: function_name argument is required").build()
+                ))).description("Error: function_name argument is required").build();
         }
 
         StringBuilder context = new StringBuilder();
@@ -130,13 +123,10 @@ public class AnalyzeFunctionPrompt implements McpPrompt {
         List<McpSchema.PromptMessage> messages = new ArrayList<>();
         messages.add(new McpSchema.PromptMessage(
             McpSchema.Role.USER,
-            new McpSchema.TextContent(context.toString())
+            McpSchema.TextContent.builder(context.toString()).build()
         ));
 
-        return new McpSchema.GetPromptResult(
-            "Analyze function: " + functionIdentifier,
-            messages
-        );
+        return McpSchema.GetPromptResult.builder(messages).description("Analyze function: " + functionIdentifier).build();
     }
 
     private Function findFunction(Program program, String identifier) {

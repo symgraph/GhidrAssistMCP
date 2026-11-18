@@ -15,7 +15,8 @@ import ghidra.program.model.listing.InstructionIterator;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 public class DisassembleAtTool implements McpTool {
 
     @Override
@@ -35,8 +36,8 @@ public class DisassembleAtTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("address", Map.of("type", "string",
                     "description", "Start address to disassemble (e.g. '0xC121' or 'C121')")),
@@ -54,7 +55,7 @@ public class DisassembleAtTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded").build();
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build()).build();
         }
 
         String addressStr = (String) arguments.get("address");
@@ -74,12 +75,12 @@ public class DisassembleAtTool implements McpTool {
             startAddr = currentProgram.getAddressFactory().getAddress(addressStr);
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid address: " + addressStr).build();
+                .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build()).build();
         }
 
         if (startAddr == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Could not parse address: " + addressStr).build();
+                .addContent(McpSchema.TextContent.builder("Could not parse address: " + addressStr).build()).build();
         }
 
         Address endAddr = startAddr.add(length - 1);
@@ -96,15 +97,15 @@ public class DisassembleAtTool implements McpTool {
             if (!success) {
                 currentProgram.endTransaction(txId, false);
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Disassembly failed at " + addressStr +
-                        ". Try clear_existing=true if the range is currently defined as data.")
+                    .addContent(McpSchema.TextContent.builder("Disassembly failed at " + addressStr +
+                        ". Try clear_existing=true if the range is currently defined as data.").build())
                     .build();
             }
             currentProgram.endTransaction(txId, true);
         } catch (Exception e) {
             currentProgram.endTransaction(txId, false);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Disassembly failed at " + addressStr + ": " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Disassembly failed at " + addressStr + ": " + e.getMessage()).build())
                 .build();
         }
 
@@ -133,7 +134,7 @@ public class DisassembleAtTool implements McpTool {
         sb.append("\nTotal instructions: ").append(instrCount);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(sb.toString()).build();
+            .addContent(McpSchema.TextContent.builder(sb.toString()).build()).build();
     }
 
     @Override

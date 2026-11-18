@@ -14,7 +14,8 @@ import ghidra.program.model.listing.CommentType;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * Consolidated MCP tool for comment operations.
@@ -43,8 +44,8 @@ public class CommentsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -78,7 +79,7 @@ public class CommentsTool implements McpTool {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -86,7 +87,7 @@ public class CommentsTool implements McpTool {
         if (action == null || action.isEmpty()) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("action parameter is required")
+                .addContent(McpSchema.TextContent.builder("action parameter is required").build())
                 .build();
         }
 
@@ -102,7 +103,7 @@ public class CommentsTool implements McpTool {
             default:
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Invalid action: " + action + ". Use 'get', 'set', 'list', or 'remove'")
+                    .addContent(McpSchema.TextContent.builder("Invalid action: " + action + ". Use 'get', 'set', 'list', or 'remove'").build())
                     .build();
         }
     }
@@ -117,12 +118,12 @@ public class CommentsTool implements McpTool {
             if (function == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Function not found: " + functionName)
+                    .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                     .build();
             }
             String comment = function.getComment();
             return McpSchema.CallToolResult.builder()
-                .addTextContent(comment != null ? comment : "(no comment)")
+                .addContent(McpSchema.TextContent.builder(comment != null ? comment : "(no comment)").build())
                 .build();
         }
 
@@ -131,26 +132,26 @@ public class CommentsTool implements McpTool {
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
             CodeUnit codeUnit = program.getListing().getCodeUnitAt(address);
             if (codeUnit == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("No code unit at address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("No code unit at address: " + addressStr).build())
                     .build();
             }
             CommentType commentType = parseCommentType(commentTypeStr);
             String comment = codeUnit.getComment(commentType);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(comment != null ? comment : "(no comment)")
+                .addContent(McpSchema.TextContent.builder(comment != null ? comment : "(no comment)").build())
                 .build();
         }
 
         return McpSchema.CallToolResult.builder()
             .isError(true)
-            .addTextContent("Either 'address' or 'function_name' is required for get")
+            .addContent(McpSchema.TextContent.builder("Either 'address' or 'function_name' is required for get").build())
             .build();
     }
 
@@ -159,7 +160,7 @@ public class CommentsTool implements McpTool {
         if (comment == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("comment parameter is required for set")
+                .addContent(McpSchema.TextContent.builder("comment parameter is required for set").build())
                 .build();
         }
 
@@ -171,7 +172,7 @@ public class CommentsTool implements McpTool {
             if (function == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Function not found: " + functionName)
+                    .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                     .build();
             }
             int txId = program.startTransaction("Set Function Comment");
@@ -179,13 +180,13 @@ public class CommentsTool implements McpTool {
                 function.setComment(comment);
                 program.endTransaction(txId, true);
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Set comment on function '" + functionName + "': \"" + comment + "\"")
+                    .addContent(McpSchema.TextContent.builder("Set comment on function '" + functionName + "': \"" + comment + "\"").build())
                     .build();
             } catch (Exception e) {
                 program.endTransaction(txId, false);
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Error: " + e.getMessage())
+                    .addContent(McpSchema.TextContent.builder("Error: " + e.getMessage()).build())
                     .build();
             }
         }
@@ -195,14 +196,14 @@ public class CommentsTool implements McpTool {
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
             CodeUnit codeUnit = program.getListing().getCodeUnitAt(address);
             if (codeUnit == null) {
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("No code unit at address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("No code unit at address: " + addressStr).build())
                     .build();
             }
             CommentType commentType = parseCommentType((String) arguments.get("comment_type"));
@@ -211,20 +212,20 @@ public class CommentsTool implements McpTool {
                 codeUnit.setComment(commentType, comment);
                 program.endTransaction(txId, true);
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Set " + getCommentTypeName(commentType) + " comment at " + addressStr + ": \"" + comment + "\"")
+                    .addContent(McpSchema.TextContent.builder("Set " + getCommentTypeName(commentType) + " comment at " + addressStr + ": \"" + comment + "\"").build())
                     .build();
             } catch (Exception e) {
                 program.endTransaction(txId, false);
                 return McpSchema.CallToolResult.builder()
                     .isError(true)
-                    .addTextContent("Error: " + e.getMessage())
+                    .addContent(McpSchema.TextContent.builder("Error: " + e.getMessage()).build())
                     .build();
             }
         }
 
         return McpSchema.CallToolResult.builder()
             .isError(true)
-            .addTextContent("Either 'address' or 'function_name' is required for set")
+            .addContent(McpSchema.TextContent.builder("Either 'address' or 'function_name' is required for set").build())
             .build();
     }
 
@@ -233,7 +234,7 @@ public class CommentsTool implements McpTool {
         if (functionName == null || functionName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("function_name is required for list")
+                .addContent(McpSchema.TextContent.builder("function_name is required for list").build())
                 .build();
         }
 
@@ -241,7 +242,7 @@ public class CommentsTool implements McpTool {
         if (function == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("Function not found: " + functionName)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                 .build();
         }
 
@@ -273,7 +274,7 @@ public class CommentsTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 
@@ -282,7 +283,7 @@ public class CommentsTool implements McpTool {
         if (addressStr == null || addressStr.isEmpty()) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("address is required for remove")
+                .addContent(McpSchema.TextContent.builder("address is required for remove").build())
                 .build();
         }
 
@@ -290,7 +291,7 @@ public class CommentsTool implements McpTool {
         if (address == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("Invalid address: " + addressStr)
+                .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                 .build();
         }
 
@@ -298,7 +299,7 @@ public class CommentsTool implements McpTool {
         if (codeUnit == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("No code unit at address: " + addressStr)
+                .addContent(McpSchema.TextContent.builder("No code unit at address: " + addressStr).build())
                 .build();
         }
 
@@ -308,13 +309,13 @@ public class CommentsTool implements McpTool {
             codeUnit.setComment(commentType, null);
             program.endTransaction(txId, true);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Removed " + getCommentTypeName(commentType) + " comment at " + addressStr)
+                .addContent(McpSchema.TextContent.builder("Removed " + getCommentTypeName(commentType) + " comment at " + addressStr).build())
                 .build();
         } catch (Exception e) {
             program.endTransaction(txId, false);
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("Error: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error: " + e.getMessage()).build())
                 .build();
         }
     }

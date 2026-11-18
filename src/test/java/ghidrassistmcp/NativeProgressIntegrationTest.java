@@ -38,7 +38,8 @@ import ghidra.program.model.address.AddressFactory;
 import ghidra.program.model.symbol.SymbolIterator;
 import ghidra.program.model.symbol.SymbolTable;
 import ghidra.util.task.TaskMonitor;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** SDK-native progress over the stateless HTTP transport, without opening a Ghidra database. */
 @Timeout(40)
@@ -145,7 +146,7 @@ class NativeProgressIntegrationTest {
 
             fixture.analysisRelease.countDown();
             JsonNode response = wire.response("canonical-analysis");
-            assertEquals(JSON.valueToTree(baseline), ModernMcpRequests.withoutProtocolFields(response.path("result")),
+            assertEquals(ModernMcpRequests.withoutProtocolFields(JSON.valueToTree(baseline)), ModernMcpRequests.withoutProtocolFields(response.path("result")),
                 "Adding progress must preserve the canonical tool's original result");
             awaitNoConsumers(fixture);
             wire.drain();
@@ -170,7 +171,7 @@ class NativeProgressIntegrationTest {
             assertTrue(fixture.backend.supportsRequestMonitoring("rename_symbols_batch"),
                 "The canonical batch wrapper must retain the production opt-in");
             McpSchema.CallToolResult baseline = fixture.backend.callTool("rename_symbols_batch", arguments);
-            JsonNode baselineJson = JSON.valueToTree(baseline);
+            JsonNode baselineJson = ModernMcpRequests.withoutProtocolFields(JSON.valueToTree(baseline));
             JsonNode report = renameReport(baselineJson);
             assertEquals(4, report.path("total").asInt());
             assertEquals(0, report.path("succeeded").asInt());
@@ -374,9 +375,9 @@ class NativeProgressIntegrationTest {
                 @Override public boolean supportsProgramSelection() { return false; }
                 @Override public boolean isProjectLifecycleOperation() { return true; }
                 @Override public String getDescription() { return "Test exclusive project admission"; }
-                @Override public McpSchema.JsonSchema getInputSchema() { return emptySchema(); }
+                @Override public JsonSchema getInputSchema() { return emptySchema(); }
                 @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program ignored) {
-                    return McpSchema.CallToolResult.builder().addTextContent("Transition admitted").build();
+                    return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("Transition admitted").build()).build();
                 }
             });
             server = new GhidrAssistMCPServer("127.0.0.1", 0, backend);
@@ -394,8 +395,8 @@ class NativeProgressIntegrationTest {
                 @Override public String getDescription() { return "Controlled monitored native operation"; }
                 @Override public boolean isLongRunning() { return true; }
                 @Override public boolean supportsRequestMonitoring() { return true; }
-                @Override public McpSchema.JsonSchema getInputSchema() {
-                    return new McpSchema.JsonSchema("object", Map.of("run", Map.of("type", "string")),
+                @Override public JsonSchema getInputSchema() {
+                    return new JsonSchema("object", Map.of("run", Map.of("type", "string")),
                         List.of("run"), false, null, null);
                 }
                 @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program selected) {
@@ -421,7 +422,7 @@ class NativeProgressIntegrationTest {
                             throw new IllegalStateException("Test native operation interrupted", interrupted);
                         }
                         for (int step = 1; step <= STEPS; step++) monitor.setProgress(step);
-                        return McpSchema.CallToolResult.builder().addTextContent("FULL_SOURCE_" + run.name)
+                        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("FULL_SOURCE_" + run.name).build())
                             .structuredContent(Map.of("run", run.name, "total", STEPS, "complete", true)).build();
                     } finally {
                         run.closes.incrementAndGet();
@@ -438,8 +439,8 @@ class NativeProgressIntegrationTest {
         }
     }
 
-    private static McpSchema.JsonSchema emptySchema() {
-        return new McpSchema.JsonSchema("object", Map.of(), List.of(), false, null, null);
+    private static JsonSchema emptySchema() {
+        return new JsonSchema("object", Map.of(), List.of(), false, null, null);
     }
 
     /** Preserve every notification and response from each request's own response stream. */

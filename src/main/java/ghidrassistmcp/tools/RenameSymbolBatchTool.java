@@ -20,7 +20,8 @@ import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.tasks.McpTask;
 import ghidrassistmcp.tasks.McpTaskMonitor;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * Batch version of {@code rename_symbol}.
@@ -65,8 +66,8 @@ public class RenameSymbolBatchTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        // NOTE: McpSchema.JsonSchema doesn't have an 'items' field, so we represent arrays using raw Maps.
+    public JsonSchema getInputSchema() {
+        // NOTE: JsonSchema doesn't have an 'items' field, so we represent arrays using raw Maps.
         Map<String, Object> renameItemProps = new HashMap<>();
         renameItemProps.put("target_type", Map.of(
             "type", "string",
@@ -98,7 +99,7 @@ public class RenameSymbolBatchTool implements McpTool {
         Map<String, Object> props = new HashMap<>();
         props.put("renames", renamesSchema);
 
-        return new McpSchema.JsonSchema("object", props, List.of("renames"), null, null, null);
+        return new JsonSchema("object", props, List.of("renames"), null, null, null);
     }
 
     @Override
@@ -118,14 +119,14 @@ public class RenameSymbolBatchTool implements McpTool {
             TaskMonitor monitor) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         Object renamesObj = arguments.get("renames");
         if (!(renamesObj instanceof List<?>)) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("renames parameter is required and must be an array")
+                .addContent(McpSchema.TextContent.builder("renames parameter is required and must be an array").build())
                 .build();
         }
 
@@ -237,7 +238,7 @@ public class RenameSymbolBatchTool implements McpTool {
         root.set("results", results);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(root.toString())
+            .addContent(McpSchema.TextContent.builder(root.toString()).build())
             .build();
     }
 

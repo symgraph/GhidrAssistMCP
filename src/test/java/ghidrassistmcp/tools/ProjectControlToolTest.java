@@ -19,7 +19,7 @@ import ghidra.framework.protocol.ghidra.Handler;
 import ghidrassistmcp.project.ProjectController;
 import ghidrassistmcp.tools.ProjectControlTool.Operation;
 import io.modelcontextprotocol.json.McpJsonDefaults;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class ProjectControlToolTest {
     @BeforeAll static void registerGhidraProtocol() { Handler.registerHandler(); }

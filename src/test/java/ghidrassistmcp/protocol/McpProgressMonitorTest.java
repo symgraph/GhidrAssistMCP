@@ -12,13 +12,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class McpProgressMonitorTest {
     @Test void acceptsNativeStringAndIntegerTokensWithoutConvertingThem() {
         for (Object token : new Object[] {"", "correlation", (byte) 1, (short) 2, 3, 4L,
                 new BigInteger("123456789012345678901234567890")}) {
-            List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+            List<McpSchema.ProgressParams> updates = new ArrayList<>();
             assertTrue(McpProgressMonitor.supportsToken(token));
             try (McpProgressMonitor monitor = new McpProgressMonitor(token, updates::add)) {
                 monitor.initialize(1);
@@ -40,7 +40,7 @@ class McpProgressMonitorTest {
     }
 
     @Test void sendsInitialZeroCoalescesIntermediateUpdatesAndAlwaysSendsFinalTotal() {
-        List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+        List<McpSchema.ProgressParams> updates = new ArrayList<>();
         AtomicLong now = new AtomicLong();
         try (McpProgressMonitor monitor = new McpProgressMonitor("token", updates::add, now::get)) {
             monitor.initialize(5);
@@ -60,7 +60,7 @@ class McpProgressMonitorTest {
     }
 
     @Test void suppressesSameRegressiveAndMessageOnlyUpdatesAndClampsAtTotal() {
-        List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+        List<McpSchema.ProgressParams> updates = new ArrayList<>();
         AtomicLong now = new AtomicLong();
         try (McpProgressMonitor monitor = new McpProgressMonitor(7, updates::add, now::get)) {
             monitor.initialize(3);
@@ -80,7 +80,7 @@ class McpProgressMonitorTest {
     }
 
     @Test void closePreventsAllLaterNotificationsWithoutInventingCompletion() {
-        List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+        List<McpSchema.ProgressParams> updates = new ArrayList<>();
         AtomicLong now = new AtomicLong();
         McpProgressMonitor monitor = new McpProgressMonitor("token", updates::add, now::get);
         monitor.initialize(4);
@@ -111,7 +111,7 @@ class McpProgressMonitorTest {
     }
 
     @Test void indeterminateProgressOmitsTotalAndSaturatesIncrementOverflow() {
-        List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+        List<McpSchema.ProgressParams> updates = new ArrayList<>();
         AtomicLong now = new AtomicLong();
         try (McpProgressMonitor monitor = new McpProgressMonitor("token", updates::add, now::get)) {
             monitor.initialize(-1);
@@ -127,7 +127,7 @@ class McpProgressMonitorTest {
     }
 
     @Test void emptyWorkHasOneZeroNotificationAndNoFabricatedAdditionalProgress() {
-        List<McpSchema.ProgressNotification> updates = new ArrayList<>();
+        List<McpSchema.ProgressParams> updates = new ArrayList<>();
         try (McpProgressMonitor monitor = new McpProgressMonitor("token", updates::add)) {
             monitor.initialize(0);
             monitor.setProgress(4);
@@ -137,7 +137,7 @@ class McpProgressMonitorTest {
         }
     }
 
-    private static List<Double> values(List<McpSchema.ProgressNotification> updates) {
-        return updates.stream().map(McpSchema.ProgressNotification::progress).toList();
+    private static List<Double> values(List<McpSchema.ProgressParams> updates) {
+        return updates.stream().map(McpSchema.ProgressParams::progress).toList();
     }
 }

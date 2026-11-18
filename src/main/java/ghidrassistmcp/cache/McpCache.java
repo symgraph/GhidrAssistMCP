@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Cache for MCP tool results with program modification-based invalidation.

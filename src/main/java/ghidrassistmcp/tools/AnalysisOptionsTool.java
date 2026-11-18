@@ -14,7 +14,8 @@ import ghidra.framework.preferences.Preferences;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class AnalysisOptionsTool implements McpTool {
 
@@ -42,8 +43,8 @@ public class AnalysisOptionsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -344,7 +345,7 @@ public class AnalysisOptionsTool implements McpTool {
 
     private McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 }

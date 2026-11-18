@@ -6,7 +6,8 @@ import java.util.Map;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class SearchFunctionsByNameTool implements McpTool {
 
@@ -20,8 +21,8 @@ public class SearchFunctionsByNameTool implements McpTool {
     public String getDescription() { return "Search for functions whose name contains the search term"; }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "search_term", Map.of("type", "string", "description", "Search term to match against function names"),
                 "limit", Map.of("type", "integer", "description", "Maximum results (default 100)")
@@ -32,12 +33,12 @@ public class SearchFunctionsByNameTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("No program currently loaded").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("No program currently loaded").build()).build();
         }
 
         String searchTerm = (String) arguments.get("search_term");
         if (searchTerm == null || searchTerm.isEmpty()) {
-            return McpSchema.CallToolResult.builder().addTextContent("search_term is required").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("search_term is required").build()).build();
         }
 
         int limit = 100;
@@ -66,6 +67,6 @@ public class SearchFunctionsByNameTool implements McpTool {
             result.append("\nFound ").append(count).append(" matching functions");
         }
 
-        return McpSchema.CallToolResult.builder().addTextContent(result.toString()).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(result.toString()).build()).build();
     }
 }

@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Test;
 import ghidra.framework.model.DomainFile;
 import ghidrassistmcp.resources.McpResource;
 import ghidra.program.model.listing.Program;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 class ProtocolBackendTest {
     private final TestBackend backend = new TestBackend();
@@ -27,8 +28,8 @@ class ProtocolBackendTest {
     void nullArgumentsAreAnEmptyObjectAndInvalidArgumentsAreErrors() {
         backend.registerTool(new TestTool("validation_test", false, false) {
             @Override
-            public McpSchema.JsonSchema getInputSchema() {
-                return new McpSchema.JsonSchema("object", Map.of("count", Map.of(
+            public JsonSchema getInputSchema() {
+                return new JsonSchema("object", Map.of("count", Map.of(
                     "type", "integer", "minimum", 1)), List.of("count"), false, null, null);
             }
         });
@@ -49,7 +50,7 @@ class ProtocolBackendTest {
             @Override
             public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 executions.incrementAndGet();
-                return McpSchema.CallToolResult.builder().addTextContent(program.getName()).build();
+                return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(program.getName()).build()).build();
             }
         });
         assertTrue(backend.callTool("target_test", Map.of("program_name", "missing")).isError());
@@ -62,14 +63,14 @@ class ProtocolBackendTest {
     @Test
     void contextDecorationPreservesErrorStructuredContentMetadataAndNonTextContent() {
         backend.current = program("example", "/example");
-        McpSchema.ImageContent image = new McpSchema.ImageContent(null, "AA==", "image/png");
+        McpSchema.ImageContent image = new McpSchema.ImageContent(null, "AA==", "image/png", null);
         Map<String, Object> data = Map.of("reason", "test failure");
         Map<String, Object> meta = Map.of("test", "metadata");
         backend.registerTool(new TestTool("content_test", true, false) {
             @Override
             public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
-                return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("failure"), image),
-                    true, data, meta);
+                return new McpSchema.CallToolResult(List.of(McpSchema.TextContent.builder("failure").build(), image),
+                    data, true, McpSchema.ResultType.COMPLETE, meta);
             }
         });
         var result = backend.callTool("content_test", Map.of());
@@ -92,7 +93,7 @@ class ProtocolBackendTest {
             public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 executions.incrementAndGet();
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent(program.getDomainFile().getPathname()).build();
+                    .addContent(McpSchema.TextContent.builder(program.getDomainFile().getPathname()).build()).build();
             }
         });
         var initial = backend.callTool("cache_test", Map.of());
@@ -116,7 +117,7 @@ class ProtocolBackendTest {
             @Override
             public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 executions.incrementAndGet();
-                return McpSchema.CallToolResult.builder().addTextContent("failed").isError(true).build();
+                return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("failed").build()).isError(true).build();
             }
         });
         backend.callTool("error_cache_test", Map.of());
@@ -129,21 +130,21 @@ class ProtocolBackendTest {
         backend.registerTool(new TestTool("legacy_failure_test", false, false) {
             @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to read function\nDetailed failure explanation").build();
+                    .addContent(McpSchema.TextContent.builder("Failed to read function\nDetailed failure explanation").build()).build();
             }
         });
         assertTrue(backend.callTool("legacy_failure_test", Map.of()).isError());
         backend.registerTool(new TestTool("legacy_failure_test", false, false) {
             @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Function example not found\nTry another address").build();
+                    .addContent(McpSchema.TextContent.builder("Function example not found\nTry another address").build()).build();
             }
         });
         assertTrue(backend.callTool("legacy_failure_test", Map.of()).isError());
         backend.registerTool(new TestTool("get_comment", false, false) {
             @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Error: documented behavior\nThis is literal comment content").build();
+                    .addContent(McpSchema.TextContent.builder("Error: documented behavior\nThis is literal comment content").build()).build();
             }
         });
         assertFalse(Boolean.TRUE.equals(backend.callTool("get_comment", Map.of()).isError()));
@@ -180,7 +181,7 @@ class ProtocolBackendTest {
         assertEquals("a+b", backend.readResource("test://program/a+b"));
         assertEquals("a+b", backend.readResource("test://program/a%2Bb"));
         assertEquals("a b", backend.readResource("test://program/a%20b"));
-        assertThrows(io.modelcontextprotocol.spec.McpError.class,
+        assertThrows(io.modelcontextprotocol.modern.McpException.class,
             () -> backend.readResource("test://program/missing"));
     }
 
@@ -226,11 +227,11 @@ class ProtocolBackendTest {
         @Override public String getDescription() { return "Test tool"; }
         @Override public boolean requiresProgramContext() { return needsProgram; }
         @Override public boolean isCacheable() { return cacheable; }
-        @Override public McpSchema.JsonSchema getInputSchema() {
-            return new McpSchema.JsonSchema("object", Map.of(), List.of(), false, null, null);
+        @Override public JsonSchema getInputSchema() {
+            return new JsonSchema("object", Map.of(), List.of(), false, null, null);
         }
         @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
-            return McpSchema.CallToolResult.builder().addTextContent("ok").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("ok").build()).build();
         }
     }
 

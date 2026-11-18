@@ -10,7 +10,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** An advertised, operation-specific contract over an existing implementation. */
 public final class ExplicitTool implements McpTool {
@@ -74,8 +75,8 @@ public final class ExplicitTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        McpSchema.JsonSchema source = delegate.getInputSchema();
+    public JsonSchema getInputSchema() {
+        JsonSchema source = delegate.getInputSchema();
         Map<String, Object> original = source.properties() == null ? Map.of() : source.properties();
         Map<String, Object> properties = new LinkedHashMap<>();
         List<String> names = parameters == null ? new ArrayList<>(original.keySet()) : parameters;
@@ -89,7 +90,7 @@ public final class ExplicitTool implements McpTool {
             ? source.required() == null ? List.of() : source.required().stream()
                 .filter(properties::containsKey).toList()
             : required;
-        return new McpSchema.JsonSchema("object", properties, requiredNames, false,
+        return new JsonSchema("object", properties, requiredNames, false,
             source.defs(), source.definitions());
     }
 
@@ -97,7 +98,7 @@ public final class ExplicitTool implements McpTool {
         Map<String, Object> property = new LinkedHashMap<>();
         if (schema instanceof Map<?, ?> raw) {
             raw.forEach((k, v) -> property.put(String.valueOf(k), v));
-        } else if (schema instanceof McpSchema.JsonSchema typed) {
+        } else if (schema instanceof JsonSchema typed) {
             property.put("type", typed.type());
         } else {
             return schema;
@@ -148,7 +149,7 @@ public final class ExplicitTool implements McpTool {
     }
 
     private McpSchema.CallToolResult validate(Map<String, Object> arguments) {
-        McpSchema.JsonSchema schema = getInputSchema();
+        JsonSchema schema = getInputSchema();
         for (String key : schema.required()) {
             Object value = arguments.get(key);
             if (value == null || value instanceof String text && text.isBlank() && !key.equals("comment")) {
@@ -196,7 +197,7 @@ public final class ExplicitTool implements McpTool {
     }
 
     private static McpSchema.CallToolResult error(String message) {
-        return McpSchema.CallToolResult.builder().isError(true).addTextContent(message).build();
+        return McpSchema.CallToolResult.builder().isError(true).addContent(McpSchema.TextContent.builder(message).build()).build();
     }
 
     @Override

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitorAdapter;
 import ghidrassistmcp.GhidrAssistMCPBackend;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class AnalyzeProgramToolTest {
     private final TestBackend backend = new TestBackend();

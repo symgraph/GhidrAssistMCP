@@ -11,7 +11,8 @@ import ghidra.program.model.listing.Program;
 import ghidra.program.model.reloc.Relocation;
 import ghidra.program.model.reloc.RelocationTable;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that lists relocation entries from the program.
@@ -34,11 +35,11 @@ public class ListRelocationsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "offset", new McpSchema.JsonSchema("integer", null, null, null, null, null),
-                "limit", new McpSchema.JsonSchema("integer", null, null, null, null, null)
+                "offset", new JsonSchema("integer", null, null, null, null, null),
+                "limit", new JsonSchema("integer", null, null, null, null, null)
             ),
             List.of(), null, null, null);
     }
@@ -47,7 +48,7 @@ public class ListRelocationsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -71,7 +72,7 @@ public class ListRelocationsTool implements McpTool {
         if (totalCount == 0) {
             result.append("No relocations found in this program.\n");
             return McpSchema.CallToolResult.builder()
-                .addTextContent(result.toString())
+                .addContent(McpSchema.TextContent.builder(result.toString()).build())
                 .build();
         }
 
@@ -127,7 +128,7 @@ public class ListRelocationsTool implements McpTool {
         result.append("\n");
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 }

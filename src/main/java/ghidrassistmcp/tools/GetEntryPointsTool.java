@@ -9,7 +9,8 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.symbol.Symbol;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class GetEntryPointsTool implements McpTool {
 
@@ -23,14 +24,14 @@ public class GetEntryPointsTool implements McpTool {
     public String getDescription() { return "Get the entry points of the program"; }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", Map.of(), List.of(), null, null, null);
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object", Map.of(), List.of(), null, null, null);
     }
 
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("No program currently loaded").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("No program currently loaded").build()).build();
         }
 
         StringBuilder sb = new StringBuilder();
@@ -59,6 +60,6 @@ public class GetEntryPointsTool implements McpTool {
             sb.append("\nTotal: ").append(count).append(" entry points");
         }
 
-        return McpSchema.CallToolResult.builder().addTextContent(sb.toString()).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(sb.toString()).build()).build();
     }
 }

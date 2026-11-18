@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import ghidrassistmcp.GhidrAssistMCPBackend;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class RationalizedToolCatalogTest {
     @Test void catalogHasExplicitUniqueNamesAndActionSpecificAnnotations() {

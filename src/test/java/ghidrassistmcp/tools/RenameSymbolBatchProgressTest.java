@@ -39,7 +39,7 @@ import ghidra.util.task.TaskMonitorAdapter;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.protocol.McpProgressMonitor;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /** Progress is an observation of existing per-item rename outcomes, not a new transaction policy. */
 @Timeout(15)

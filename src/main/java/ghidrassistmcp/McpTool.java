@@ -10,7 +10,8 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.tasks.McpTask;
 import ghidrassistmcp.tasks.McpProgramContext;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * Interface for individual MCP tools that can be registered with the backend.
@@ -49,7 +50,7 @@ public interface McpTool {
     /**
      * Get the input schema for this tool
      */
-    McpSchema.JsonSchema getInputSchema();
+    JsonSchema getInputSchema();
 
     /** Optional machine-readable schema for structuredContent returned by this tool. */
     default Map<String, Object> getOutputSchema() { return null; }

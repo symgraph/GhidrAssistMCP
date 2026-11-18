@@ -12,7 +12,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.GhidrAssistMCPPlugin;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets the current function in Ghidra.
@@ -30,8 +31,8 @@ public class GetCurrentFunctionTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(),
             List.of(), null, null, null);
     }
@@ -41,12 +42,12 @@ public class GetCurrentFunctionTool implements McpTool {
         // Fallback for when backend reference is not available
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Current function functionality requires UI context. Use get_function_info with a function name or address instead.")
+            .addContent(McpSchema.TextContent.builder("Current function functionality requires UI context. Use get_function_info with a function name or address instead.").build())
             .build();
     }
 
@@ -54,7 +55,7 @@ public class GetCurrentFunctionTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -69,11 +70,11 @@ public class GetCurrentFunctionTool implements McpTool {
             Address currentAddress = plugin.getCurrentAddress();
             if (currentAddress == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("No current address available (cursor may not be positioned in the listing)")
+                    .addContent(McpSchema.TextContent.builder("No current address available (cursor may not be positioned in the listing)").build())
                     .build();
             }
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No function contains the current address: " + currentAddress)
+                .addContent(McpSchema.TextContent.builder("No function contains the current address: " + currentAddress).build())
                 .build();
         }
 
@@ -93,7 +94,7 @@ public class GetCurrentFunctionTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 }

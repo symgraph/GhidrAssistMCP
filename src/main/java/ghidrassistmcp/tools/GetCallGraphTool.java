@@ -13,7 +13,8 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets the function call graph (callers and callees).
@@ -36,8 +37,8 @@ public class GetCallGraphTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "function", Map.of(
                     "type", "string",
@@ -62,7 +63,7 @@ public class GetCallGraphTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -84,7 +85,7 @@ public class GetCallGraphTool implements McpTool {
 
         if (!direction.equals("both") && !direction.equals("callers") && !direction.equals("callees")) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid direction. Use 'both', 'callers', or 'callees'")
+                .addContent(McpSchema.TextContent.builder("Invalid direction. Use 'both', 'callers', or 'callees'").build())
                 .build();
         }
 
@@ -92,7 +93,7 @@ public class GetCallGraphTool implements McpTool {
         Function function = findFunction(currentProgram, functionIdentifier);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionIdentifier)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionIdentifier).build())
                 .build();
         }
 
@@ -118,7 +119,7 @@ public class GetCallGraphTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

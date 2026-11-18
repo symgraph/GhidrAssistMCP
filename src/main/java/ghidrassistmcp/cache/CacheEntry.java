@@ -5,7 +5,7 @@ package ghidrassistmcp.cache;
 
 import java.time.Instant;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Represents a cached tool result with metadata for validation.

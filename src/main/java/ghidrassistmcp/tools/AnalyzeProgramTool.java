@@ -12,7 +12,8 @@ import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
 import ghidrassistmcp.tasks.McpTaskMonitor;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class AnalyzeProgramTool implements McpTool {
 
@@ -51,8 +52,8 @@ public class AnalyzeProgramTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("scope", Map.of(
                     "type", "string",
@@ -166,7 +167,7 @@ public class AnalyzeProgramTool implements McpTool {
         if (backend != null) {
             backend.clearCache();
         }
-        return McpSchema.CallToolResult.builder().addTextContent(sb.toString().trim())
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(sb.toString().trim()).build())
             .isError(failed).build();
     }
 
@@ -213,12 +214,12 @@ public class AnalyzeProgramTool implements McpTool {
     }
 
     private McpSchema.CallToolResult errorResult(String message) {
-        return McpSchema.CallToolResult.builder().addTextContent(message).isError(true).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(message).build()).isError(true).build();
     }
 
     private McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 }

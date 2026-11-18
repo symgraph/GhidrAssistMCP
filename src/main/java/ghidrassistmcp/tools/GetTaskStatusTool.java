@@ -10,7 +10,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets the status of an async task or retrieves its result.
@@ -28,10 +29,10 @@ public class GetTaskStatusTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "task_id", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "task_id", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("task_id"), null, null, null);
     }
@@ -39,7 +40,7 @@ public class GetTaskStatusTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Task status requires backend reference. Use execute with backend parameter.")
+            .addContent(McpSchema.TextContent.builder("Task status requires backend reference. Use execute with backend parameter.").build())
             .build();
     }
 
@@ -50,7 +51,7 @@ public class GetTaskStatusTool implements McpTool {
         if (taskId == null || taskId.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("task_id parameter is required")
+                .addContent(McpSchema.TextContent.builder("task_id parameter is required").build())
                 .build();
         }
 
@@ -58,7 +59,7 @@ public class GetTaskStatusTool implements McpTool {
         if (taskManager == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("Task manager not available")
+                .addContent(McpSchema.TextContent.builder("Task manager not available").build())
                 .build();
         }
 
@@ -66,7 +67,7 @@ public class GetTaskStatusTool implements McpTool {
         if (task == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("Task not found: " + taskId)
+                .addContent(McpSchema.TextContent.builder("Task not found: " + taskId).build())
                 .build();
         }
 

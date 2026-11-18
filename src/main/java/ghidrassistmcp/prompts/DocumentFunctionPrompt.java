@@ -13,7 +13,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Prompt for generating documentation for a function.
@@ -39,16 +39,8 @@ public class DocumentFunctionPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument(
-                "function_name",
-                "Name or address of the function to document",
-                true
-            ),
-            new McpSchema.PromptArgument(
-                "format",
-                "Documentation format: doxygen, markdown, or plain (default: doxygen)",
-                false
-            )
+            McpSchema.PromptArgument.builder("function_name").description("Name or address of the function to document").required(true).build(),
+            McpSchema.PromptArgument.builder("format").description("Documentation format: doxygen, markdown, or plain (default: doxygen)").required(false).build()
         );
     }
 
@@ -58,13 +50,10 @@ public class DocumentFunctionPrompt implements McpPrompt {
         String format = arguments.getOrDefault("format", "doxygen");
 
         if (functionIdentifier == null || functionIdentifier.isEmpty()) {
-            return new McpSchema.GetPromptResult(
-                "Error: function_name argument is required",
-                List.of(new McpSchema.PromptMessage(
+            return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(
                     McpSchema.Role.USER,
-                    new McpSchema.TextContent("Error: function_name argument is required")
-                ))
-            );
+                    McpSchema.TextContent.builder("Error: function_name argument is required").build()
+                ))).description("Error: function_name argument is required").build();
         }
 
         StringBuilder context = new StringBuilder();
@@ -144,13 +133,10 @@ public class DocumentFunctionPrompt implements McpPrompt {
         List<McpSchema.PromptMessage> messages = new ArrayList<>();
         messages.add(new McpSchema.PromptMessage(
             McpSchema.Role.USER,
-            new McpSchema.TextContent(context.toString())
+            McpSchema.TextContent.builder(context.toString()).build()
         ));
 
-        return new McpSchema.GetPromptResult(
-            "Document function: " + functionIdentifier,
-            messages
-        );
+        return McpSchema.GetPromptResult.builder(messages).description("Document function: " + functionIdentifier).build();
     }
 
     private Function findFunction(Program program, String identifier) {

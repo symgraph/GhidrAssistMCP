@@ -23,7 +23,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.prompts.McpPrompt;
 import ghidrassistmcp.resources.McpResource;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 class ProjectOperationGateBackendTest {
     private final TestBackend backend = new TestBackend();
@@ -190,7 +191,7 @@ class ProjectOperationGateBackendTest {
     }
 
     private static McpSchema.CallToolResult success() {
-        return McpSchema.CallToolResult.builder().addTextContent("complete").build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("complete").build()).build();
     }
 
     private static void awaitUninterruptibly(CountDownLatch latch) {
@@ -235,8 +236,8 @@ class ProjectOperationGateBackendTest {
         @Override public boolean supportsProgramSelection() { return false; }
         @Override public boolean isProjectLifecycleOperation() { return transition; }
         @Override public boolean isLongRunning() { return async; }
-        @Override public McpSchema.JsonSchema getInputSchema() {
-            return new McpSchema.JsonSchema("object", Map.of(), List.of(), false, null, null);
+        @Override public JsonSchema getInputSchema() {
+            return new JsonSchema("object", Map.of(), List.of(), false, null, null);
         }
         @Override public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program program) {
             return executor.get();
@@ -258,7 +259,7 @@ class ProjectOperationGateBackendTest {
         @Override public String getDescription() { return "Lifecycle prompt test fixture"; }
         @Override public List<McpSchema.PromptArgument> getArguments() { return List.of(); }
         @Override public McpSchema.GetPromptResult generatePrompt(Map<String, String> arguments, Program program) {
-            return new McpSchema.GetPromptResult("prompt", List.of());
+            return McpSchema.GetPromptResult.builder(List.of()).description("prompt").build();
         }
     }
 }

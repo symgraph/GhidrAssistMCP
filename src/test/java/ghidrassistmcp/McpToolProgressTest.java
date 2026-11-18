@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitorAdapter;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 class McpToolProgressTest {
     @Test void bridgesExistingTaskAwareExecutionWithStoredProgressAndProgramSnapshot() {
@@ -42,7 +43,7 @@ class McpToolProgressTest {
 
     @Test void preservesReturnedToolErrorWithoutReplacingItOrReportingSuccess() {
         Probe tool = new Probe();
-        tool.result = McpSchema.CallToolResult.builder().isError(true).addTextContent("Original analysis error").build();
+        tool.result = McpSchema.CallToolResult.builder().isError(true).addContent(McpSchema.TextContent.builder("Original analysis error").build()).build();
         RecordingMonitor monitor = new RecordingMonitor();
         assertSame(tool.result, tool.executeMonitored(Map.of(), null, null, monitor));
         assertEquals(List.of(0L, 31L, 100L), monitor.values);
@@ -67,10 +68,10 @@ class McpToolProgressTest {
     private static final class Probe implements McpTool {
         McpTask seen;
         RuntimeException failure;
-        McpSchema.CallToolResult result = McpSchema.CallToolResult.builder().addTextContent("Original result").build();
+        McpSchema.CallToolResult result = McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("Original result").build()).build();
         @Override public String getName() { return "task_aware_probe"; }
         @Override public String getDescription() { return "Existing task-aware implementation"; }
-        @Override public McpSchema.JsonSchema getInputSchema() { return null; }
+        @Override public JsonSchema getInputSchema() { return null; }
         @Override public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program program) {
             throw new AssertionError("Task-aware overload was bypassed");
         }

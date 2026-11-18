@@ -11,7 +11,7 @@ import ghidra.program.model.address.GenericAddressSpace;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.Memory;
 import ghidra.program.model.mem.MemoryAccessException;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class GetHexdumpToolTest {
     @Test void unreadableMemoryIsDistinguishedFromZeroBytes() {

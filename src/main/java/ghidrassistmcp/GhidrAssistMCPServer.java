@@ -23,18 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.modern.McpException;
+import io.modelcontextprotocol.modern.McpSchema;
 import io.modelcontextprotocol.modern.McpSchema.CacheScope;
 import io.modelcontextprotocol.modern.McpSchema.CallToolOutcome;
 import io.modelcontextprotocol.modern.McpSchema.CallToolRequest;
-import io.modelcontextprotocol.modern.McpSchema.CallToolResult;
-import io.modelcontextprotocol.modern.McpSchema.GetPromptResult;
-import io.modelcontextprotocol.modern.McpSchema.Implementation;
 import io.modelcontextprotocol.modern.McpSchema.Prompt;
-import io.modelcontextprotocol.modern.McpSchema.PromptArgument;
 import io.modelcontextprotocol.modern.McpSchema.ReadResourceResult;
 import io.modelcontextprotocol.modern.McpSchema.ResourceTemplate;
 import io.modelcontextprotocol.modern.McpSchema.TextResourceContents;
-import io.modelcontextprotocol.modern.McpSchema.Tool;
 import io.modelcontextprotocol.modern.server.McpRequestContext;
 import io.modelcontextprotocol.modern.server.McpServer;
 import io.modelcontextprotocol.modern.server.McpSyncResponse;
@@ -55,8 +51,6 @@ import io.modelcontextprotocol.modern.server.feature.ToolsFeature;
 import io.modelcontextprotocol.modern.server.feature.ToolsPage;
 import io.modelcontextprotocol.modern.server.transport.HttpServletMcpTransport;
 import io.modelcontextprotocol.server.transport.ServerHttpHeaderValidator;
-import io.modelcontextprotocol.spec.McpError;
-import io.modelcontextprotocol.spec.McpSchema;
 
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
@@ -67,8 +61,7 @@ import ghidrassistmcp.protocol.McpProgressMonitor;
 
 /**
  * Stateless MCP {@code 2026-07-28} server over Streamable HTTP at {@code /mcp}.
- * The backend keeps the SDK's classic schema types; this class converts them at the
- * protocol boundary and delegates all business logic to McpBackend.
+ * This class handles the transport and delegates all business logic to McpBackend.
  */
 public class GhidrAssistMCPServer {
 
@@ -85,7 +78,6 @@ public class GhidrAssistMCPServer {
     private Server jettyServer;
     private HttpServletMcpTransport transport;
     private McpChangeFeed changes;
-    private JacksonMcpJsonMapper mapper;
     private final Runnable catalogListener = this::refreshToolCatalog;
     private final String host;
     private final int port;
@@ -135,13 +127,13 @@ public class GhidrAssistMCPServer {
             // Custom ObjectMapper that ignores unknown properties
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            mapper = new JacksonMcpJsonMapper(objectMapper);
+            JacksonMcpJsonMapper mapper = new JacksonMcpJsonMapper(objectMapper);
             changes = new McpChangeFeed();
 
             // Repositories read the backend on every request, so catalog changes need no rebuild.
             Msg.info(this, "Building MCP server with backend tools");
             var serverBuilder = McpServer.builder()
-                .serverInfo(convert(backend.getServerInfo(), Implementation.class))
+                .serverInfo(backend.getServerInfo())
                 .instructions(INSTRUCTIONS)
                 .jsonMapper(mapper)
                 .feature(ToolsFeature.ofSync(new ToolRepository(), mapper,
@@ -257,27 +249,17 @@ public class GhidrAssistMCPServer {
         Object token = ctx.progressToken();
         Map<String, Object> arguments = request.arguments();
         if (!backend.supportsRequestMonitoring(name)) {
-            return McpSyncResponse.result(toolResult(backend.callTool(name, arguments)));
+            return McpSyncResponse.result(backend.callTool(name, arguments));
         }
         if (!McpProgressMonitor.supportsToken(token)) {
-            return McpSyncResponse.result(toolResult(
-                backend.callToolMonitored(name, arguments, TaskMonitor.DUMMY)));
+            return McpSyncResponse.result(backend.callToolMonitored(name, arguments, TaskMonitor.DUMMY));
         }
         return McpSyncResponse.streaming(notifier -> {
             try (McpProgressMonitor monitor = new McpProgressMonitor(token, progress ->
                     notifier.progress(progress.progress(), progress.total(), progress.message()))) {
-                return toolResult(backend.callToolMonitored(name, arguments, monitor));
+                return backend.callToolMonitored(name, arguments, monitor);
             }
         });
-    }
-
-    private CallToolResult toolResult(McpSchema.CallToolResult result) {
-        return convert(result, CallToolResult.class);
-    }
-
-    /** Classic and modern schema records share their wire form, so convert through JSON. */
-    private <T> T convert(Object value, Class<T> type) {
-        return mapper.convertValue(value, type);
     }
 
     /** Native MCP clients omit Origin; browser clients must use the bound local origin. */
@@ -311,16 +293,14 @@ public class GhidrAssistMCPServer {
     private final class ToolRepository implements McpSyncToolRepository {
         @Override
         public ToolsPage list(McpRequestContext ctx, String cursor) {
-            return ToolsPage.of(backend.getAvailableTools().stream()
-                .map(tool -> convert(tool, Tool.class)).toList());
+            return ToolsPage.of(backend.getAvailableTools());
         }
 
         @Override
         public McpSyncTool find(McpRequestContext ctx, String name) {
             for (McpSchema.Tool tool : backend.getAvailableTools()) {
                 if (tool.name().equals(name)) {
-                    return McpSyncTool.of(convert(tool, Tool.class),
-                        (callContext, request) -> callTool(name, callContext, request));
+                    return McpSyncTool.of(tool, (callContext, request) -> callTool(name, callContext, request));
                 }
             }
             return null;
@@ -357,12 +337,7 @@ public class GhidrAssistMCPServer {
                 return null;
             }
             return McpSyncResource.of((readContext, request) -> {
-                String content;
-                try {
-                    content = ghidraBackend.readResource(uri);
-                } catch (McpError notFound) {
-                    content = null;
-                }
+                String content = ghidraBackend.readResource(uri);
                 if (content == null) {
                     throw McpException.invalidParams("Unknown resource: " + uri, Map.of("uri", uri));
                 }
@@ -393,8 +368,7 @@ public class GhidrAssistMCPServer {
                     return McpSyncPrompt.of(definition(prompt), (getContext, request) -> {
                         Map<String, String> args = request.arguments() != null
                             ? new java.util.HashMap<>(request.arguments()) : new java.util.HashMap<>();
-                        return McpSyncResponse.result(convert(ghidraBackend.generatePrompt(prompt, args),
-                            GetPromptResult.class));
+                        return McpSyncResponse.result(ghidraBackend.generatePrompt(prompt, args));
                     });
                 }
             }
@@ -404,8 +378,7 @@ public class GhidrAssistMCPServer {
         private Prompt definition(McpPrompt prompt) {
             return Prompt.builder(prompt.getName())
                 .description(prompt.getDescription())
-                .arguments(prompt.getArguments().stream()
-                    .map(argument -> convert(argument, PromptArgument.class)).toList())
+                .arguments(prompt.getArguments())
                 .build();
         }
     }

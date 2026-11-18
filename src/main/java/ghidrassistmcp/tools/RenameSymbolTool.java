@@ -32,7 +32,8 @@ import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that renames symbols (functions, data, or variables).
@@ -67,8 +68,8 @@ public class RenameSymbolTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "target_type", Map.of(
                     "type", "string",
@@ -96,7 +97,7 @@ public class RenameSymbolTool implements McpTool {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
                 .isError(true)
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -104,7 +105,7 @@ public class RenameSymbolTool implements McpTool {
             RenameSymbolCore.renameOne(arguments, currentProgram, decompilerService);
         return McpSchema.CallToolResult.builder()
             .isError(!result.success)
-            .addTextContent(result.message)
+            .addContent(McpSchema.TextContent.builder(result.message).build())
             .build();
     }
 }

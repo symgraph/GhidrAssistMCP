@@ -31,7 +31,7 @@ import ghidra.util.task.TaskMonitorAdapter;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.tasks.McpTask;
 import io.modelcontextprotocol.json.McpJsonDefaults;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class GetPseudocodeBatchToolTest {
     @Test void synchronousBackendBatchMatchesTheActualAdvertisedFinalSchema() {

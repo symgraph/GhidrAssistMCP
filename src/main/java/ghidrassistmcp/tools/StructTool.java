@@ -55,7 +55,8 @@ import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool for structure operations.
@@ -144,10 +145,10 @@ public class StructTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
+    public JsonSchema getInputSchema() {
         // Note: This is a single tool with action-specific parameters.
         // We express this as a single object schema with rich per-field descriptions.
-        return new McpSchema.JsonSchema("object",
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -305,14 +306,14 @@ public class StructTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String action = (String) arguments.get("action");
         if (action == null || action.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("action parameter is required ('create', 'modify', 'auto_create', 'rename_field', or 'field_xrefs')")
+                .addContent(McpSchema.TextContent.builder("action parameter is required ('create', 'modify', 'auto_create', 'rename_field', or 'field_xrefs')").build())
                 .build();
         }
 
@@ -337,7 +338,7 @@ public class StructTool implements McpTool {
                 return executeFieldXrefs(arguments, currentProgram);
             default:
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid action. Use 'create', 'modify', 'merge', 'set_field', 'name_gap', 'auto_create', 'rename_field', or 'field_xrefs'")
+                    .addContent(McpSchema.TextContent.builder("Invalid action. Use 'create', 'modify', 'merge', 'set_field', 'name_gap', 'auto_create', 'rename_field', or 'field_xrefs'").build())
                     .build();
         }
     }
@@ -354,7 +355,7 @@ public class StructTool implements McpTool {
         // Validate input - need either name or c_definition
         if ((name == null || name.isEmpty()) && (cDefinition == null || cDefinition.isEmpty())) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Either 'name' (for empty struct) or 'c_definition' must be provided for create action")
+                .addContent(McpSchema.TextContent.builder("Either 'name' (for empty struct) or 'c_definition' must be provided for create action").build())
                 .build();
         }
 
@@ -373,22 +374,22 @@ public class StructTool implements McpTool {
 
             if (result == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to create structure")
+                    .addContent(McpSchema.TextContent.builder("Failed to create structure").build())
                     .build();
             }
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully created structure '" + result.getName() +
+                .addContent(McpSchema.TextContent.builder("Successfully created structure '" + result.getName() +
                     "' with " + result.getNumComponents() + " components, size " +
-                    result.getLength() + " bytes at category " + result.getCategoryPath())
+                    result.getLength() + " bytes at category " + result.getCategoryPath()).build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error creating structure: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -470,13 +471,13 @@ public class StructTool implements McpTool {
 
         if (structureName == null || structureName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for modify action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for modify action").build())
                 .build();
         }
 
         if (cDefinition == null || cDefinition.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("c_definition parameter is required for modify action")
+                .addContent(McpSchema.TextContent.builder("c_definition parameter is required for modify action").build())
                 .build();
         }
 
@@ -488,8 +489,8 @@ public class StructTool implements McpTool {
             Structure existingStruct = findStructure(dtm, structureName);
             if (existingStruct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Structure '" + structureName + "' not found. " +
-                        "Use create_structure to create a new structure.")
+                    .addContent(McpSchema.TextContent.builder("Structure '" + structureName + "' not found. " +
+                        "Use create_structure to create a new structure.").build())
                     .build();
             }
 
@@ -498,7 +499,7 @@ public class StructTool implements McpTool {
             Structure newStruct = parseStructFromCDefinition(dtm, cDefinition, structureName);
             if (newStruct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to parse C structure definition")
+                    .addContent(McpSchema.TextContent.builder("Failed to parse C structure definition").build())
                     .build();
             }
 
@@ -507,22 +508,22 @@ public class StructTool implements McpTool {
 
             if (result == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to apply new structure definition")
+                    .addContent(McpSchema.TextContent.builder("Failed to apply new structure definition").build())
                     .build();
             }
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully modified structure '" + result.getName() +
+                .addContent(McpSchema.TextContent.builder("Successfully modified structure '" + result.getName() +
                     "': now has " + result.getNumComponents() + " components, size " +
-                    result.getLength() + " bytes")
+                    result.getLength() + " bytes").build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error modifying structure: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -546,12 +547,12 @@ public class StructTool implements McpTool {
 
         if (structureName == null || structureName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for merge action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for merge action").build())
                 .build();
         }
         if (cDefinition == null || cDefinition.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("c_definition parameter is required for merge action")
+                .addContent(McpSchema.TextContent.builder("c_definition parameter is required for merge action").build())
                 .build();
         }
 
@@ -562,21 +563,21 @@ public class StructTool implements McpTool {
             Structure existingStruct = findStructure(dtm, structureName);
             if (existingStruct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Structure '" + structureName + "' not found. Use create_structure first.")
+                    .addContent(McpSchema.TextContent.builder("Structure '" + structureName + "' not found. Use create_structure first.").build())
                     .build();
             }
 
             if (existingStruct.isPackingEnabled()) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Cannot safely merge into a packed structure ('" + existingStruct.getName() +
-                        "'). Use replace_structure or set_structure_field instead.")
+                    .addContent(McpSchema.TextContent.builder("Cannot safely merge into a packed structure ('" + existingStruct.getName() +
+                        "'). Use replace_structure or set_structure_field instead.").build())
                     .build();
             }
 
             Structure parsedStruct = parseStructFromCDefinition(dtm, cDefinition, structureName);
             if (parsedStruct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to parse C structure definition")
+                    .addContent(McpSchema.TextContent.builder("Failed to parse C structure definition").build())
                     .build();
             }
 
@@ -605,16 +606,16 @@ public class StructTool implements McpTool {
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully merged fields into structure '" + existingStruct.getName() +
+                .addContent(McpSchema.TextContent.builder("Successfully merged fields into structure '" + existingStruct.getName() +
                     "': now has " + existingStruct.getNumComponents() + " components, size " +
-                    existingStruct.getLength() + " bytes")
+                    existingStruct.getLength() + " bytes").build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error merging structure fields: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -637,17 +638,17 @@ public class StructTool implements McpTool {
 
         if (structureName == null || structureName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for set_field action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for set_field action").build())
                 .build();
         }
         if (fieldOffsetNum == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_offset parameter is required for set_field action")
+                .addContent(McpSchema.TextContent.builder("field_offset parameter is required for set_field action").build())
                 .build();
         }
         if (dataTypeName == null || dataTypeName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("data_type parameter is required for set_field action")
+                .addContent(McpSchema.TextContent.builder("data_type parameter is required for set_field action").build())
                 .build();
         }
 
@@ -660,27 +661,27 @@ public class StructTool implements McpTool {
 
         if (!operation.equals("replace") && !operation.equals("insert")) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid op for set_field: '" + op + "'. Use 'replace' or 'insert'.")
+                .addContent(McpSchema.TextContent.builder("Invalid op for set_field: '" + op + "'. Use 'replace' or 'insert'.").build())
                 .build();
         }
         if (fieldOffset < 0) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_offset must be >= 0")
+                .addContent(McpSchema.TextContent.builder("field_offset must be >= 0").build())
                 .build();
         }
         if (pointerLevel < 0) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("pointer_level must be >= 0")
+                .addContent(McpSchema.TextContent.builder("pointer_level must be >= 0").build())
                 .build();
         }
         if (arrayCount != null && arrayCount < 1) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("array_count must be >= 1")
+                .addContent(McpSchema.TextContent.builder("array_count must be >= 1").build())
                 .build();
         }
         if (explicitLength != null && explicitLength < 1) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_length must be >= 1")
+                .addContent(McpSchema.TextContent.builder("field_length must be >= 1").build())
                 .build();
         }
 
@@ -691,14 +692,14 @@ public class StructTool implements McpTool {
             Structure struct = findStructure(dtm, structureName);
             if (struct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Structure '" + structureName + "' not found")
+                    .addContent(McpSchema.TextContent.builder("Structure '" + structureName + "' not found").build())
                     .build();
             }
 
             DataType baseType = resolveDataType(dtm, dataTypeName);
             if (baseType == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Data type not found: " + dataTypeName)
+                    .addContent(McpSchema.TextContent.builder("Data type not found: " + dataTypeName).build())
                     .build();
             }
 
@@ -710,8 +711,8 @@ public class StructTool implements McpTool {
                 int elemLen = resolvedType.getLength();
                 if (elemLen <= 0) {
                     return McpSchema.CallToolResult.builder()
-                        .addTextContent("Cannot build array of variable-length type '" + resolvedType.getName() +
-                            "'. Provide a fixed-length base type (or avoid array_count).")
+                        .addContent(McpSchema.TextContent.builder("Cannot build array of variable-length type '" + resolvedType.getName() +
+                            "'. Provide a fixed-length base type (or avoid array_count).").build())
                         .build();
                 }
                 resolvedType = new ArrayDataType(resolvedType, arrayCount, elemLen);
@@ -720,8 +721,8 @@ public class StructTool implements McpTool {
             int length = explicitLength != null ? explicitLength : resolvedType.getLength();
             if (length <= 0) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Resolved data type '" + resolvedType.getName() + "' has variable/unknown length. " +
-                        "Provide field_length explicitly.")
+                    .addContent(McpSchema.TextContent.builder("Resolved data type '" + resolvedType.getName() + "' has variable/unknown length. " +
+                        "Provide field_length explicitly.").build())
                     .build();
             }
 
@@ -749,25 +750,25 @@ public class StructTool implements McpTool {
                     }
                 } catch (Exception e2) {
                     return McpSchema.CallToolResult.builder()
-                        .addTextContent("Failed to apply field at offset 0x" + Integer.toHexString(fieldOffset) +
-                            " in structure '" + struct.getName() + "': " + e2.getMessage())
+                        .addContent(McpSchema.TextContent.builder("Failed to apply field at offset 0x" + Integer.toHexString(fieldOffset) +
+                            " in structure '" + struct.getName() + "': " + e2.getMessage()).build())
                         .build();
                 }
             }
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully set field at +0x" + Integer.toHexString(fieldOffset) +
+                .addContent(McpSchema.TextContent.builder("Successfully set field at +0x" + Integer.toHexString(fieldOffset) +
                     " in structure '" + struct.getName() + "' to type '" + resolvedType.getName() + "'" +
                     (fieldName != null && !fieldName.isBlank() ? " name '" + fieldName + "'" : "") +
-                    " (" + length + " bytes)")
+                    " (" + length + " bytes)").build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error setting structure field: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -787,22 +788,22 @@ public class StructTool implements McpTool {
 
         if (structureName == null || structureName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for name_gap action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for name_gap action").build())
                 .build();
         }
         if (fieldOffsetNum == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_offset parameter is required for name_gap action")
+                .addContent(McpSchema.TextContent.builder("field_offset parameter is required for name_gap action").build())
                 .build();
         }
         if (fieldLengthNum == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_length parameter is required for name_gap action")
+                .addContent(McpSchema.TextContent.builder("field_length parameter is required for name_gap action").build())
                 .build();
         }
         if (fieldName == null || fieldName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_name parameter is required for name_gap action")
+                .addContent(McpSchema.TextContent.builder("field_name parameter is required for name_gap action").build())
                 .build();
         }
 
@@ -810,7 +811,7 @@ public class StructTool implements McpTool {
         int fieldLength = fieldLengthNum.intValue();
         if (fieldOffset < 0 || fieldLength < 1) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("field_offset must be >= 0 and field_length must be >= 1")
+                .addContent(McpSchema.TextContent.builder("field_offset must be >= 0 and field_length must be >= 1").build())
                 .build();
         }
 
@@ -824,7 +825,7 @@ public class StructTool implements McpTool {
             Structure struct = findStructure(dtm, structureName);
             if (struct == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Structure '" + structureName + "' not found")
+                    .addContent(McpSchema.TextContent.builder("Structure '" + structureName + "' not found").build())
                     .build();
             }
 
@@ -845,9 +846,9 @@ public class StructTool implements McpTool {
                     boolean overlaps = compStart < endExclusive && compEndExclusive > start;
                     if (overlaps && !comp.isUndefined()) {
                         return McpSchema.CallToolResult.builder()
-                            .addTextContent("Refusing to overwrite non-undefined component at +0x" +
+                            .addContent(McpSchema.TextContent.builder("Refusing to overwrite non-undefined component at +0x" +
                                 Integer.toHexString(comp.getOffset()) + " (" + comp.getDataType().getName() + "). " +
-                                "Pass allow_overwrite=true to force.")
+                                "Pass allow_overwrite=true to force.").build())
                             .build();
                     }
                 }
@@ -859,15 +860,15 @@ public class StructTool implements McpTool {
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully named gap in structure '" + struct.getName() + "' at +0x" +
-                    Integer.toHexString(fieldOffset) + " (" + fieldLength + " bytes) as '" + fieldName + "'")
+                .addContent(McpSchema.TextContent.builder("Successfully named gap in structure '" + struct.getName() + "' at +0x" +
+                    Integer.toHexString(fieldOffset) + " (" + fieldLength + " bytes) as '" + fieldName + "'").build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error naming structure gap: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -1108,22 +1109,22 @@ public class StructTool implements McpTool {
 
         if (functionIdentifier == null || functionIdentifier.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("function_identifier parameter is required for auto_create action")
+                .addContent(McpSchema.TextContent.builder("function_identifier parameter is required for auto_create action").build())
                 .build();
         }
 
         if (variableName == null || variableName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("variable_name parameter is required for auto_create action")
+                .addContent(McpSchema.TextContent.builder("variable_name parameter is required for auto_create action").build())
                 .build();
         }
 
         StructureResult result = createAndApplyStructure(currentProgram, functionIdentifier, variableName);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.success ?
+            .addContent(McpSchema.TextContent.builder(result.success ?
                 "Successfully created and applied structure: " + result.message :
-                "Failed to create structure: " + result.errorMessage)
+                "Failed to create structure: " + result.errorMessage).build())
             .build();
     }
 
@@ -1369,19 +1370,19 @@ public class StructTool implements McpTool {
 
         if (structureName == null || structureName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for rename_field action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for rename_field action").build())
                 .build();
         }
 
         if (newFieldName == null || newFieldName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("new_field_name parameter is required for rename_field action")
+                .addContent(McpSchema.TextContent.builder("new_field_name parameter is required for rename_field action").build())
                 .build();
         }
 
         if (oldFieldName == null && offsetNum == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Either old_field_name or offset must be provided to identify the field")
+                .addContent(McpSchema.TextContent.builder("Either old_field_name or offset must be provided to identify the field").build())
                 .build();
         }
 
@@ -1408,11 +1409,11 @@ public class StructTool implements McpTool {
 
             if (dataType == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Structure '" + structureName + "' not found")
+                    .addContent(McpSchema.TextContent.builder("Structure '" + structureName + "' not found").build())
                     .build();
             } else if (!(dataType instanceof Structure)) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Data type '" + structureName + "' found but is not a structure")
+                    .addContent(McpSchema.TextContent.builder("Data type '" + structureName + "' found but is not a structure").build())
                     .build();
             }
 
@@ -1422,13 +1423,13 @@ public class StructTool implements McpTool {
                 int offset = offsetNum.intValue();
                 if (offset < 0 || offset >= structure.getLength()) {
                      return McpSchema.CallToolResult.builder()
-                        .addTextContent("Offset " + offset + " is out of bounds for structure '" + structureName + "' (length " + structure.getLength() + ")")
+                        .addContent(McpSchema.TextContent.builder("Offset " + offset + " is out of bounds for structure '" + structureName + "' (length " + structure.getLength() + ")").build())
                         .build();
                 }
                 component = structure.getComponentAt(offset);
                 if (component == null) {
                      return McpSchema.CallToolResult.builder()
-                        .addTextContent("No component found at offset " + offset + " in structure '" + structureName + "'")
+                        .addContent(McpSchema.TextContent.builder("No component found at offset " + offset + " in structure '" + structureName + "'").build())
                         .build();
                 }
             } else {
@@ -1442,7 +1443,7 @@ public class StructTool implements McpTool {
                 }
                 if (component == null) {
                     return McpSchema.CallToolResult.builder()
-                        .addTextContent("Field '" + oldFieldName + "' not found in structure '" + structureName + "'")
+                        .addContent(McpSchema.TextContent.builder("Field '" + oldFieldName + "' not found in structure '" + structureName + "'").build())
                         .build();
                 }
             }
@@ -1452,22 +1453,22 @@ public class StructTool implements McpTool {
                 component.setFieldName(newFieldName);
             } catch (Exception e) {
                  return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to set field name: " + e.getMessage())
+                    .addContent(McpSchema.TextContent.builder("Failed to set field name: " + e.getMessage()).build())
                     .build();
             }
 
             committed = true;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully renamed field in structure '" + structure.getName() + "': " +
+                .addContent(McpSchema.TextContent.builder("Successfully renamed field in structure '" + structure.getName() + "': " +
                                 (previousName != null ? previousName : ("offset " + component.getOffset())) +
-                                " -> " + newFieldName)
+                                " -> " + newFieldName).build())
                 .build();
 
         } catch (Exception e) {
             String msg = "Error renaming structure field: " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);
@@ -1481,7 +1482,7 @@ public class StructTool implements McpTool {
         String structName = (String) arguments.get("structure_name");
         if (structName == null || structName.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("structure_name parameter is required for field_xrefs action")
+                .addContent(McpSchema.TextContent.builder("structure_name parameter is required for field_xrefs action").build())
                 .build();
         }
 
@@ -1494,7 +1495,7 @@ public class StructTool implements McpTool {
 
         if ((fieldName == null || fieldName.trim().isEmpty()) && fieldOffset == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Either field_name or field_offset parameter is required for field_xrefs action")
+                .addContent(McpSchema.TextContent.builder("Either field_name or field_offset parameter is required for field_xrefs action").build())
                 .build();
         }
 
@@ -1506,7 +1507,7 @@ public class StructTool implements McpTool {
                 instanceAddress = currentProgram.getAddressFactory().getAddress(instanceAddressStr);
             } catch (Exception e) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid instance_address format: " + instanceAddressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid instance_address format: " + instanceAddressStr).build())
                     .build();
             }
         }
@@ -1526,7 +1527,7 @@ public class StructTool implements McpTool {
         Structure struct = resolveStructureForXrefs(dtm, structName);
         if (struct == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Structure not found: " + structName)
+                .addContent(McpSchema.TextContent.builder("Structure not found: " + structName).build())
                 .build();
         }
 
@@ -1535,7 +1536,7 @@ public class StructTool implements McpTool {
         if (fieldComponent == null) {
             String fieldDesc = fieldName != null ? "field_name: " + fieldName : "field_offset: " + fieldOffset;
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Field not found in structure " + struct.getName() + " with " + fieldDesc)
+                .addContent(McpSchema.TextContent.builder("Field not found in structure " + struct.getName() + " with " + fieldDesc).build())
                 .build();
         }
 
@@ -1612,7 +1613,7 @@ public class StructTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

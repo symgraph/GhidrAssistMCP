@@ -21,7 +21,8 @@ import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.GhidrAssistMCPManager;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that opens an existing program from the Ghidra project in CodeBrowser.
@@ -52,8 +53,8 @@ public class OpenProgramTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -153,7 +154,7 @@ public class OpenProgramTool implements McpTool {
         sb.append("\nUse open_program with {\"name\": \"<pathname>\"} to open one in CodeBrowser.");
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(sb.toString())
+            .addContent(McpSchema.TextContent.builder(sb.toString()).build())
             .build();
     }
 
@@ -336,12 +337,12 @@ public class OpenProgramTool implements McpTool {
     }
 
     private static McpSchema.CallToolResult errorResult(String message) {
-        return McpSchema.CallToolResult.builder().isError(true).addTextContent(message).build();
+        return McpSchema.CallToolResult.builder().isError(true).addContent(McpSchema.TextContent.builder(message).build()).build();
     }
 
     private static McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 }

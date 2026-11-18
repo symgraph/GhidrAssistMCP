@@ -8,7 +8,7 @@ import java.util.Map;
 
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Interface for the MCP backend that handles tool management and execution.
@@ -58,9 +58,4 @@ public interface McpBackend {
      * Get server implementation info
      */
     McpSchema.Implementation getServerInfo();
-    
-    /**
-     * Get server capabilities
-     */
-    McpSchema.ServerCapabilities getCapabilities();
 }

@@ -14,7 +14,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** A real digest of function bytes, distinct from masked matching patterns and C prototypes. */
 public final class GetFunctionHashTool implements McpTool {
@@ -27,8 +28,8 @@ public final class GetFunctionHashTool implements McpTool {
         return "Compute SHA-256 over every byte in the function body, visiting all body ranges in ascending address order. " +
             "Returns the digest, byte count, and range count. Use get_function_byte_pattern for the masked prefix pattern or get_function_prototype for its C declaration.";
     }
-    @Override public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", Map.of("function", Map.of("type", "string",
+    @Override public JsonSchema getInputSchema() {
+        return new JsonSchema("object", Map.of("function", Map.of("type", "string",
             "description", "Function name, qualified name, entry address, or address inside its body")),
             List.of("function"), false, null, null);
     }
@@ -89,7 +90,7 @@ public final class GetFunctionHashTool implements McpTool {
                 "hash", HexFormat.of().formatHex(digest.digest()), "bytes_hashed", hashed,
                 "range_count", ranges, "byte_order", "ascending_body_address");
             return McpSchema.CallToolResult.builder().structuredContent(result)
-                .addTextContent(new ObjectMapper().writeValueAsString(result)).build();
+                .addContent(McpSchema.TextContent.builder(new ObjectMapper().writeValueAsString(result)).build()).build();
         } catch (Exception e) {
             return error("Error hashing function bytes: " + e.getMessage());
         }
@@ -109,6 +110,6 @@ public final class GetFunctionHashTool implements McpTool {
         return FunctionLookup.findByQualifiedName(program, identifier);
     }
     private static McpSchema.CallToolResult error(String text) {
-        return McpSchema.CallToolResult.builder().isError(true).addTextContent(text).build();
+        return McpSchema.CallToolResult.builder().isError(true).addContent(McpSchema.TextContent.builder(text).build()).build();
     }
 }

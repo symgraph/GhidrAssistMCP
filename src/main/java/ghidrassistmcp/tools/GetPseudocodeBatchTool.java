@@ -20,7 +20,8 @@ import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
 import ghidrassistmcp.tasks.McpTask;
 import ghidrassistmcp.tasks.McpTaskMonitor;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** Read several complete decompilations without repeating a tool call and task handle per function. */
 public final class GetPseudocodeBatchTool implements McpTool {
@@ -49,8 +50,8 @@ public final class GetPseudocodeBatchTool implements McpTool {
             "once in text, with per-function identity, completeness and errors in structured metadata. " +
             "Optional 1-based start_line/max_lines explicitly page each function; omitted max_lines returns all remaining lines.";
     }
-    @Override public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", Map.of(
+    @Override public JsonSchema getInputSchema() {
+        return new JsonSchema("object", Map.of(
             "functions", Map.of("type", "array", "minItems", 1,
                 "items", Map.of("type", "string", "minLength", 1),
                 "description", "Function names, qualified names, or entry/containing addresses"),
@@ -215,7 +216,7 @@ public final class GetPseudocodeBatchTool implements McpTool {
         metadata.put("cancelled", cancelled);
         metadata.put("results", items);
         // Source appears only here, never duplicated in structuredContent.
-        return McpSchema.CallToolResult.builder().addTextContent(text.toString())
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(text.toString()).build())
             .structuredContent(metadata).isError(succeeded == 0 || cancelled != 0).build();
     }
 
@@ -286,7 +287,7 @@ public final class GetPseudocodeBatchTool implements McpTool {
         return error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
     }
     private static McpSchema.CallToolResult error(String message) {
-        return McpSchema.CallToolResult.builder().addTextContent(message).isError(true).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(message).build()).isError(true).build();
     }
 
     @FunctionalInterface interface SessionFactory { BatchSession open(Program program); }

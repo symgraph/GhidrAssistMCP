@@ -21,7 +21,8 @@ import ghidra.util.Msg;
 import ghidra.util.task.ConsoleTaskMonitor;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that sets a function's prototype/signature.
@@ -49,11 +50,11 @@ public class SetFunctionPrototypeTool implements McpTool {
     }
     
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", 
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "function_address", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "prototype", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "function_address", new JsonSchema("string", null, null, null, null, null),
+                "prototype", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("function_address", "prototype"), null, null, null);
     }
@@ -63,7 +64,7 @@ public class SetFunctionPrototypeTool implements McpTool {
         // Fallback for when backend reference is not available
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -72,13 +73,13 @@ public class SetFunctionPrototypeTool implements McpTool {
 
         if (functionAddrStr == null || functionAddrStr.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("function_address parameter is required")
+                .addContent(McpSchema.TextContent.builder("function_address parameter is required").build())
                 .build();
         }
 
         if (prototype == null || prototype.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("prototype parameter is required")
+                .addContent(McpSchema.TextContent.builder("prototype parameter is required").build())
                 .build();
         }
 
@@ -86,9 +87,9 @@ public class SetFunctionPrototypeTool implements McpTool {
         PrototypeResult result = setFunctionPrototype(currentProgram, functionAddrStr, prototype);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.success ?
+            .addContent(McpSchema.TextContent.builder(result.success ?
                 "Successfully set function prototype: " + prototype :
-                "Failed to set function prototype: " + result.errorMessage)
+                "Failed to set function prototype: " + result.errorMessage).build())
             .build();
     }
 

@@ -12,7 +12,8 @@ import ghidra.util.Msg;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.GhidrAssistMCPManager;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class ProjectFilesTool implements McpTool {
 
@@ -43,8 +44,8 @@ public class ProjectFilesTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -275,12 +276,12 @@ public class ProjectFilesTool implements McpTool {
 
     private McpSchema.CallToolResult errorResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message).isError(true).build();
+            .addContent(McpSchema.TextContent.builder(message).build()).isError(true).build();
     }
 
     private McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 }

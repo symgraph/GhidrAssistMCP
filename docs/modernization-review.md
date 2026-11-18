@@ -120,7 +120,7 @@ The HTTP container moves to the supported Jetty 12.1 line with EE11 servlet supp
 
 MCP `2026-07-28` makes every request self-contained: `_meta` carries the protocol version and client capabilities, and `server/discover` replaces the `initialize` handshake. SDK 2.2.0 implements it as a separate server that refuses initialization-based revisions, so this release drops support for clients on `2025-11-25` and earlier, together with the legacy SSE endpoints `/sse` and `/message`. Such clients receive error `-32022` naming the supported version. See the [MCP specification](https://modelcontextprotocol.io/specification/2026-07-28).
 
-The backend still exchanges the SDK's classic `spec.McpSchema` types, which 2.2.0 retains but deprecates. `GhidrAssistMCPServer` converts them to the modern records at the protocol boundary through their shared JSON form. Its tool, prompt, and resource repositories read the backend on every request, so catalog changes need no server rebuild; tool-setting changes are also broadcast as `notifications/tools/list_changed` to `subscriptions/listen` streams. The SDK's own origin validator is disabled because the Jetty origin filter remains the single authority. SDK 2.2.0 depends on Reactor `3.9.0-RC1`, a release candidate.
+The backend uses the modern `McpSchema` records throughout; the classic `spec.McpSchema` types, deprecated in 2.2.0, are no longer referenced. The modern SDK types tool input schemas as plain maps, so tools declare them with the project-owned `ghidrassistmcp.protocol.JsonSchema` record, which keeps the classic record's components and wire form (`$defs`, absent components omitted) and converts to a map for the catalog and input validation. `GhidrAssistMCPServer`'s tool, prompt, and resource repositories read the backend on every request, so catalog changes need no server rebuild; tool-setting changes are also broadcast as `notifications/tools/list_changed` to `subscriptions/listen` streams. The SDK's own origin validator is disabled because the Jetty origin filter remains the single authority. SDK 2.2.0 depends on Reactor `3.9.0-RC1`, a release candidate.
 
 Input schemas are validated before execution. Reads and edits have separate annotations, selectors hidden by the catalog cannot be overridden, and missing required fields fail visibly. Operation failures set `isError`. Adding context preserves the result's structured content, metadata, error flag, and non-text content. JSON result text can also populate structured content; legacy human-readable results retain their existing presentation.
 
@@ -149,7 +149,7 @@ GhidrAssist and GhidrAssistHL discover tool definitions dynamically, so their cl
 3. Add `get_current_context` to atomically return the program, browser, function, cursor, and selection. Add `navigate_to_address` as a clear UI navigation operation.
 4. Add explicit `save_program` and dirty-state inspection so annotation changes have predictable persistence before a client closes a program.
 5. Implement the MCP Tasks extension as an SDK `McpFeature` backed by `McpTaskManager`. SDK 2.2.0 provides the extension point but no Tasks implementation. Keep the application job API until clients adopt it.
-6. Migrate the backend from the deprecated classic `spec.McpSchema` types to the modern records, removing the boundary conversion. Build a client compatibility matrix for `2026-07-28`.
+6. Build a client compatibility matrix for `2026-07-28`.
 7. Evaluate catalog selection against the previous names using a fixed benign fixture and natural-language tasks such as “show the pseudocode,” “list callers,” and “change a local variable type.” Measure first-call selection, argument validity, and successful completion. Naming quality is a design choice here, not a measured model-performance claim.
 8. Normalize masked byte-pattern wildcard syntax with `search_bytes`: the preserved signature format uses single `?` tokens, while byte search expects `??` or `**`. Add unambiguous variable/function identities for mutations rather than relying on duplicate display names.
 9. Bring the three MCP companions into alignment through a shared contract table and matching fixture tests, including host-specific deviations.
@@ -162,7 +162,7 @@ Automated tests cover catalog contracts, project-tool path/argument validation a
 | --- | --- |
 | Ghidra 12.0 `buildExtension test` | 90 tests passed; version-specific ZIP built |
 | Ghidra 12.1 `buildExtension test` | 90 tests passed; version-specific ZIP built |
-| Ghidra 12.2 `buildExtension test` (SDK 2.2.0, MCP `2026-07-28`) | 184 tests passed; version-specific ZIP built |
+| Ghidra 12.2 `buildExtension test` (SDK 2.2.0, MCP `2026-07-28`) | 186 tests passed; version-specific ZIP built |
 | Stateless HTTP | Discovery, tool calls, prompts, resources, progress, and list-changed notifications passed without a program; legacy `initialize` rejected |
 | Runtime isolation | Packaged server passed against each host classpath; ZIP contains one private jar and no Ghidra classes |
 | Package hygiene | Local analysis databases, editor settings, Lucene state, and unused language skeleton files excluded |

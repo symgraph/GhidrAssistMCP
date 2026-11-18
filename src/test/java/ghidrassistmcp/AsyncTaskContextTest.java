@@ -18,7 +18,8 @@ import ghidra.framework.model.DomainFile;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.tasks.McpProgramContext;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 class AsyncTaskContextTest {
 
@@ -136,8 +137,8 @@ class AsyncTaskContextTest {
         }
 
         @Override
-        public McpSchema.JsonSchema getInputSchema() {
-            return new McpSchema.JsonSchema(
+        public JsonSchema getInputSchema() {
+            return new JsonSchema(
                 "object", Map.of(), List.of(), null, null, null);
         }
 
@@ -145,7 +146,7 @@ class AsyncTaskContextTest {
         public McpSchema.CallToolResult execute(Map<String, Object> arguments,
                                                 Program currentProgram) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Result for " + currentProgram.getName())
+                .addContent(McpSchema.TextContent.builder("Result for " + currentProgram.getName()).build())
                 .build();
         }
 

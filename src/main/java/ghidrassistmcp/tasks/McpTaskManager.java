@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import ghidra.util.Msg;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Manages asynchronous MCP task execution and tracking.
@@ -200,7 +200,7 @@ public class McpTaskManager {
         McpTask task = tasks.get(taskId);
         if (task == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Task not found: " + taskId)
+                .addContent(McpSchema.TextContent.builder("Task not found: " + taskId).build())
                 .isError(true)
                 .build();
         }
@@ -219,20 +219,20 @@ public class McpTaskManager {
 
         if (task.getStatus() == McpTask.Status.FAILED) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Task failed: " + task.getErrorMessage())
+                .addContent(McpSchema.TextContent.builder("Task failed: " + task.getErrorMessage()).build())
                 .isError(true)
                 .build();
         }
 
         if (task.getStatus() == McpTask.Status.CANCELLED) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Task was cancelled")
+                .addContent(McpSchema.TextContent.builder("Task was cancelled").build())
                 .isError(true)
                 .build();
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Unknown task state: " + task.getStatus())
+            .addContent(McpSchema.TextContent.builder("Unknown task state: " + task.getStatus()).build())
             .isError(true)
             .build();
     }

@@ -16,7 +16,8 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that deletes a data type from the program's DataTypeManager.
@@ -45,11 +46,11 @@ public class DeleteDataTypeTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "name", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "category", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "name", new JsonSchema("string", null, null, null, null, null),
+                "category", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("name"), null, null, null);
     }
@@ -63,14 +64,14 @@ public class DeleteDataTypeTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String name = (String) arguments.get("name");
         if (name == null || name.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("name parameter is required")
+                .addContent(McpSchema.TextContent.builder("name parameter is required").build())
                 .build();
         }
         name = name.trim();
@@ -88,14 +89,14 @@ public class DeleteDataTypeTool implements McpTool {
         ResolveResult resolved = resolveTargetDataType(dtm, name, category);
         if (!resolved.ok) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent(resolved.message)
+                .addContent(McpSchema.TextContent.builder(resolved.message).build())
                 .build();
         }
 
         DataType target = resolved.dataType;
         if (target == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Data type not found: " + name + (category != null ? " in category: " + category : ""))
+                .addContent(McpSchema.TextContent.builder("Data type not found: " + name + (category != null ? " in category: " + category : "")).build())
                 .build();
         }
 
@@ -104,8 +105,8 @@ public class DeleteDataTypeTool implements McpTool {
         try {
             if (target.getDataTypeManager() != dtm) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Refusing to delete data type '" + target.getName() + "' because it is not owned by this program's DataTypeManager " +
-                                    "(likely a built-in or archived type). Resolved path: " + safePath(target))
+                    .addContent(McpSchema.TextContent.builder("Refusing to delete data type '" + target.getName() + "' because it is not owned by this program's DataTypeManager " +
+                                    "(likely a built-in or archived type). Resolved path: " + safePath(target)).build())
                     .build();
             }
         } catch (Exception e) {
@@ -118,8 +119,8 @@ public class DeleteDataTypeTool implements McpTool {
             boolean removed = dtm.remove(target);
             if (!removed) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Failed to delete data type '" + target.getName() + "' at " + safePath(target) + ". " +
-                                    "It may be built-in, read-only, or still referenced by other types/uses.")
+                    .addContent(McpSchema.TextContent.builder("Failed to delete data type '" + target.getName() + "' at " + safePath(target) + ". " +
+                                    "It may be built-in, read-only, or still referenced by other types/uses.").build())
                     .build();
             }
 
@@ -129,13 +130,13 @@ public class DeleteDataTypeTool implements McpTool {
             }
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully deleted data type '" + target.getName() + "' at " + safePath(target))
+                .addContent(McpSchema.TextContent.builder("Successfully deleted data type '" + target.getName() + "' at " + safePath(target)).build())
                 .build();
         } catch (Exception e) {
             String msg = "Error deleting data type '" + name + "': " + e.getMessage();
             Msg.error(this, msg, e);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(msg)
+                .addContent(McpSchema.TextContent.builder(msg).build())
                 .build();
         } finally {
             currentProgram.endTransaction(txId, committed);

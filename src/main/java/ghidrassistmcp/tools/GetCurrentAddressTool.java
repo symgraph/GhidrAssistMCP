@@ -11,7 +11,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.GhidrAssistMCPPlugin;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets the current cursor address in Ghidra.
@@ -29,8 +30,8 @@ public class GetCurrentAddressTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(),
             List.of(), null, null, null);
     }
@@ -40,13 +41,13 @@ public class GetCurrentAddressTool implements McpTool {
         // Fallback for when backend reference is not available
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Current address functionality requires UI context. " +
-                          "Program minimum address: " + currentProgram.getMinAddress())
+            .addContent(McpSchema.TextContent.builder("Current address functionality requires UI context. " +
+                          "Program minimum address: " + currentProgram.getMinAddress()).build())
             .build();
     }
 
@@ -54,7 +55,7 @@ public class GetCurrentAddressTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -67,7 +68,7 @@ public class GetCurrentAddressTool implements McpTool {
         Address currentAddress = plugin.getCurrentAddress();
         if (currentAddress == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No current address available (cursor may not be positioned in the listing)")
+                .addContent(McpSchema.TextContent.builder("No current address available (cursor may not be positioned in the listing)").build())
                 .build();
         }
 
@@ -77,7 +78,7 @@ public class GetCurrentAddressTool implements McpTool {
         result.append("Address Space: ").append(currentAddress.getAddressSpace().getName());
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 }

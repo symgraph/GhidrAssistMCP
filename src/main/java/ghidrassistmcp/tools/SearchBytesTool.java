@@ -11,7 +11,8 @@ import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.Memory;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that searches for byte patterns in program memory.
@@ -29,11 +30,11 @@ public class SearchBytesTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "pattern", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "limit", new McpSchema.JsonSchema("integer", null, null, null, null, null)
+                "pattern", new JsonSchema("string", null, null, null, null, null),
+                "limit", new JsonSchema("integer", null, null, null, null, null)
             ),
             List.of("pattern"), null, null, null);
     }
@@ -42,7 +43,7 @@ public class SearchBytesTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -55,7 +56,7 @@ public class SearchBytesTool implements McpTool {
 
         if (pattern == null || pattern.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Pattern is required")
+                .addContent(McpSchema.TextContent.builder("Pattern is required").build())
                 .build();
         }
 
@@ -68,8 +69,8 @@ public class SearchBytesTool implements McpTool {
             searchMask = parsed.mask;
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid pattern format: " + e.getMessage() +
-                    "\nExpected hex bytes like '48 8b c1' or '48 ?? c1' for wildcards")
+                .addContent(McpSchema.TextContent.builder("Invalid pattern format: " + e.getMessage() +
+                    "\nExpected hex bytes like '48 8b c1' or '48 ?? c1' for wildcards").build())
                 .build();
         }
 
@@ -87,7 +88,7 @@ public class SearchBytesTool implements McpTool {
 
             if (startAddr == null || endAddr == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("No memory to search")
+                    .addContent(McpSchema.TextContent.builder("No memory to search").build())
                     .build();
             }
 
@@ -101,7 +102,7 @@ public class SearchBytesTool implements McpTool {
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error during search: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error during search: " + e.getMessage()).build())
                 .build();
         }
 
@@ -123,7 +124,7 @@ public class SearchBytesTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

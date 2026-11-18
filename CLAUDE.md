@@ -22,7 +22,7 @@ The extension ZIP is written to `dist/`. `installExtension` changes the Ghidra i
 - `GhidrAssistMCPManager`: one shared runtime, backend, server, configuration, and bounded log. The project manager keeps it alive after all browsers close.
 - `GhidrAssistMCPProvider`: a per-window view of shared state. Providers never own the transport or independently load settings into the backend.
 - `GhidrAssistMCPBackend`: catalog, validation, program resolution, result/error handling, caching, resources, prompts, and jobs.
-- `GhidrAssistMCPServer`: stateless MCP `2026-07-28` at `/mcp` on the SDK's `modern` server; converts classic backend schema types at the boundary and reads the live catalog per request.
+- `GhidrAssistMCPServer`: stateless MCP `2026-07-28` at `/mcp` on the SDK's `modern` server; reads the live catalog per request.
 - `tools/RationalizedToolCatalog` and `tools/ExplicitTool`: operation-specific public contracts over shared implementations. The public catalog has 100 tools, 93 enabled by default.
 - `project/`: GUI project creation/open/save/close through public Ghidra APIs and the application-owned frontend.
 - `ProjectOperationGate`: fail-fast lifecycle exclusion across tools, resources, prompts, and physical async-worker cleanup.
@@ -44,7 +44,7 @@ Program-specific tools accept `program_name`, preferably an exact project path. 
 
 `import_file`, `export_program`, and script operations remain disabled by default. Legacy settings migrate to canonical operations. Old backend aliases support internal compatibility only; they are not exposed as HTTP tools. Clients must refresh their catalog after upgrade.
 
-MCP Java SDK 2.2.0 is supplied through `mcp-core` and `mcp-json-jackson2`. The server speaks only stateless `2026-07-28`; initialization-based clients (`2025-11-25` and earlier) are rejected, and the legacy SSE endpoints are gone. The backend still uses the deprecated classic `spec.McpSchema` types. Do not claim that the application's job tools implement the MCP Tasks extension.
+MCP Java SDK 2.2.0 is supplied through `mcp-core` and `mcp-json-jackson2`. The server speaks only stateless `2026-07-28`; initialization-based clients (`2025-11-25` and earlier) are rejected, and the legacy SSE endpoints are gone. Use the modern `io.modelcontextprotocol.modern.McpSchema` records, not the deprecated classic `spec.McpSchema`. Tool input schemas use `ghidrassistmcp.protocol.JsonSchema`; call `toMap()` where the SDK expects a map. Do not claim that the application's job tools implement the MCP Tasks extension.
 
 Generated `lib/` may contain stale jars from prior builds. The Gradle configuration excludes those jars from compilation and packaging. Shadow bundles the selected SDK, Jackson, NetworkNT, Jetty, Servlet, Reactor, and SLF4J runtime under private `ghidrassistmcp.internal.*` packages in one jar; Ghidra API and host Gson remain external. A subprocess test loads the packaged jar after Ghidra's libraries to check isolation and HTTP behavior.
 

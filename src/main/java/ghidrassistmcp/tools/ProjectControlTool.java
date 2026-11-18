@@ -15,7 +15,8 @@ import ghidrassistmcp.GhidrAssistMCPManager;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.project.GhidraProjectController;
 import ghidrassistmcp.project.ProjectController;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /** Explicit project lifecycle contracts over the application-owned project controller. */
 public final class ProjectControlTool implements McpTool {
@@ -62,7 +63,7 @@ public final class ProjectControlTool implements McpTool {
         };
     }
 
-    @Override public McpSchema.JsonSchema getInputSchema() {
+    @Override public JsonSchema getInputSchema() {
         Map<String, Object> properties = switch (operation) {
             case CREATE -> Map.of(
                 "location", Map.of("type", "string", "minLength", 1,
@@ -86,7 +87,7 @@ public final class ProjectControlTool implements McpTool {
             case OPEN -> List.of("path");
             case SAVE, CLOSE -> List.of();
         };
-        return new McpSchema.JsonSchema("object", properties, required, false, null, null);
+        return new JsonSchema("object", properties, required, false, null, null);
     }
 
     @Override public Map<String, Object> getOutputSchema() {
@@ -148,11 +149,11 @@ public final class ProjectControlTool implements McpTool {
                 throw new IllegalStateException("Project controller returned no operation status");
             }
             return McpSchema.CallToolResult.builder().structuredContent(result)
-                .addTextContent(JSON.writeValueAsString(result)).build();
+                .addContent(McpSchema.TextContent.builder(JSON.writeValueAsString(result)).build()).build();
         } catch (Exception e) {
             String detail = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             return McpSchema.CallToolResult.builder().isError(true)
-                .addTextContent("Error in " + getName() + ": " + detail).build();
+                .addContent(McpSchema.TextContent.builder("Error in " + getName() + ": " + detail).build()).build();
         }
     }
 

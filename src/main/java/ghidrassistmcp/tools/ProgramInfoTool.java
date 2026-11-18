@@ -8,7 +8,8 @@ import java.util.Map;
 
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that provides basic information about the currently loaded program.
@@ -26,21 +27,21 @@ public class ProgramInfoTool implements McpTool {
     }
     
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", Map.of(), List.of(), null, null, null);
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object", Map.of(), List.of(), null, null, null);
     }
     
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
         
         String info = buildProgramInfo(currentProgram);
         return McpSchema.CallToolResult.builder()
-            .addTextContent(info)
+            .addContent(McpSchema.TextContent.builder(info).build())
             .build();
     }
     

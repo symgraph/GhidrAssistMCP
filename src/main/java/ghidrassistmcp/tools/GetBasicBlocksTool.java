@@ -16,7 +16,8 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets basic blocks and control flow graph for a function.
@@ -39,10 +40,10 @@ public class GetBasicBlocksTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "function", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "function", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("function"), null, null, null);
     }
@@ -51,7 +52,7 @@ public class GetBasicBlocksTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -61,7 +62,7 @@ public class GetBasicBlocksTool implements McpTool {
         Function function = findFunction(currentProgram, functionIdentifier);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionIdentifier)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionIdentifier).build())
                 .build();
         }
 
@@ -123,12 +124,12 @@ public class GetBasicBlocksTool implements McpTool {
 
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error getting basic blocks: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error getting basic blocks: " + e.getMessage()).build())
                 .build();
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

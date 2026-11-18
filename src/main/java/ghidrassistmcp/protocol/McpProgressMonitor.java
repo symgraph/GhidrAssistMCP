@@ -8,14 +8,14 @@ import java.util.function.LongSupplier;
 
 import ghidra.util.Msg;
 import ghidra.util.task.TaskMonitorAdapter;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /** Sends optional SDK progress for one in-flight request without changing its execution. */
 public final class McpProgressMonitor extends TaskMonitorAdapter implements AutoCloseable {
     private static final long UPDATE_INTERVAL_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
 
     private final Object token;
-    private final Consumer<McpSchema.ProgressNotification> sender;
+    private final Consumer<McpSchema.ProgressParams> sender;
     private final LongSupplier nanoClock;
     private long maximum = -1;
     private long progress;
@@ -27,11 +27,11 @@ public final class McpProgressMonitor extends TaskMonitorAdapter implements Auto
     private double lastProgress;
     private long lastSentNanos;
 
-    public McpProgressMonitor(Object token, Consumer<McpSchema.ProgressNotification> sender) {
+    public McpProgressMonitor(Object token, Consumer<McpSchema.ProgressParams> sender) {
         this(token, sender, System::nanoTime);
     }
 
-    McpProgressMonitor(Object token, Consumer<McpSchema.ProgressNotification> sender,
+    McpProgressMonitor(Object token, Consumer<McpSchema.ProgressParams> sender,
             LongSupplier nanoClock) {
         if (!supportsToken(token)) throw new IllegalArgumentException("Progress token must be a string or integer");
         this.token = token;
@@ -89,7 +89,7 @@ public final class McpProgressMonitor extends TaskMonitorAdapter implements Auto
         lastProgress = value;
         lastSentNanos = now;
         try {
-            sender.accept(new McpSchema.ProgressNotification(token, value,
+            sender.accept(new McpSchema.ProgressParams(token, value,
                 maximum >= 0 ? (double) maximum : null, message.isBlank() ? null : message, null));
         } catch (RuntimeException error) {
             // Progress is optional: an unavailable notification channel must not fail the tool.

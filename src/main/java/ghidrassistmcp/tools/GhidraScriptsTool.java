@@ -35,8 +35,9 @@ import ghidrassistmcp.GhidrAssistMCPManager;
 import ghidrassistmcp.GhidrAssistMCPPlugin;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 import utilities.util.FileUtilities;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class GhidraScriptsTool implements McpTool {
 
@@ -71,8 +72,8 @@ public class GhidraScriptsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -472,7 +473,7 @@ public class GhidraScriptsTool implements McpTool {
 
     private McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 

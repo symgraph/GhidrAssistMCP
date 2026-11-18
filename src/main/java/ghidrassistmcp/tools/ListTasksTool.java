@@ -10,7 +10,8 @@ import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that lists all async tasks and their status.
@@ -28,8 +29,8 @@ public class ListTasksTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "status", Map.of(
                     "type", "string",
@@ -43,7 +44,7 @@ public class ListTasksTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Task listing requires backend reference. Use execute with backend parameter.")
+            .addContent(McpSchema.TextContent.builder("Task listing requires backend reference. Use execute with backend parameter.").build())
             .build();
     }
 
@@ -52,7 +53,7 @@ public class ListTasksTool implements McpTool {
         var taskManager = backend.getTaskManager();
         if (taskManager == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Task manager not available")
+                .addContent(McpSchema.TextContent.builder("Task manager not available").build())
                 .build();
         }
 
@@ -65,8 +66,8 @@ public class ListTasksTool implements McpTool {
                 statusFilter = McpTask.Status.valueOf(statusStr.toUpperCase());
             } catch (IllegalArgumentException e) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid status filter: " + statusStr +
-                        ". Valid values: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED")
+                    .addContent(McpSchema.TextContent.builder("Invalid status filter: " + statusStr +
+                        ". Valid values: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED").build())
                     .build();
             }
         }
@@ -86,13 +87,13 @@ public class ListTasksTool implements McpTool {
             }
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent(sb.toString())
+                .addContent(McpSchema.TextContent.builder(sb.toString()).build())
                 .build();
         }
 
         // Return full summary
         return McpSchema.CallToolResult.builder()
-            .addTextContent(taskManager.getTasksSummary())
+            .addContent(McpSchema.TextContent.builder(taskManager.getTasksSummary()).build())
             .build();
     }
 }

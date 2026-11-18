@@ -88,9 +88,10 @@ import ghidrassistmcp.tools.StructTool;
 import ghidrassistmcp.tools.TypesTool;
 import ghidrassistmcp.tools.VariablesTool;
 import ghidrassistmcp.tools.XrefsTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpException;
+import io.modelcontextprotocol.modern.McpSchema;
 import io.modelcontextprotocol.json.schema.JsonSchemaValidator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * Implementation of the MCP backend that manages tools and program state.
@@ -103,7 +104,6 @@ public class GhidrAssistMCPBackend implements McpBackend {
     private final Map<String, Boolean> toolEnabledStates = new ConcurrentHashMap<>();
     private final List<McpEventListener> eventListeners = new CopyOnWriteArrayList<>();
     private final List<Runnable> toolCatalogListeners = new CopyOnWriteArrayList<>();
-    private final ObjectMapper schemaMapper = new ObjectMapper();
     private final JsonSchemaValidator schemaValidator = io.modelcontextprotocol.json.McpJsonDefaults.getSchemaValidator();
     private volatile GhidrAssistMCPManager manager;
     private volatile boolean asyncExecutionEnabled = true;
@@ -245,7 +245,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
             // Only include enabled tools in the available tools list
             if (toolEnabledStates.getOrDefault(tool.getName(), true)) {
                 // Augment the schema with program_name parameter for multi-program support
-                McpSchema.JsonSchema augmentedSchema = getToolInputSchema(tool);
+                JsonSchema augmentedSchema = getToolInputSchema(tool);
 
                 // Build tool annotations based on McpTool interface methods
                 McpSchema.ToolAnnotations annotations = new McpSchema.ToolAnnotations(
@@ -253,15 +253,12 @@ public class GhidrAssistMCPBackend implements McpBackend {
                     tool.isReadOnly(),
                     tool.isDestructive(),
                     tool.isIdempotent(),
-                    tool.isOpenWorld(),
-                    null   // returnDirect
+                    tool.isOpenWorld()
                 );
 
-                toolList.add(McpSchema.Tool.builder()
-                    .name(tool.getName())
+                toolList.add(McpSchema.Tool.builder(tool.getName(), schemaMap(augmentedSchema))
                     .title(tool.getName())
                     .description(tool.getDescription())
-                    .inputSchema(augmentedSchema)
                     .outputSchema(getToolOutputSchema(tool))
                     .annotations(annotations)
                     .build());
@@ -272,8 +269,13 @@ public class GhidrAssistMCPBackend implements McpBackend {
         return toolList;
     }
 
-    private McpSchema.JsonSchema getToolInputSchema(McpTool tool) {
-        McpSchema.JsonSchema schema = tool.getInputSchema();
+    /** The SDK requires an input schema; a tool without one accepts an empty object. */
+    private static Map<String, Object> schemaMap(JsonSchema schema) {
+        return schema == null ? Map.of("type", "object") : schema.toMap();
+    }
+
+    private JsonSchema getToolInputSchema(McpTool tool) {
+        JsonSchema schema = tool.getInputSchema();
         return tool.supportsProgramSelection() ? augmentSchemaWithProgramName(schema) : schema;
     }
 
@@ -301,7 +303,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
      * Augment a tool's input schema with the universal 'program_name' parameter.
      * This allows all tools to optionally target a specific open program.
      */
-    private McpSchema.JsonSchema augmentSchemaWithProgramName(McpSchema.JsonSchema originalSchema) {
+    private JsonSchema augmentSchemaWithProgramName(JsonSchema originalSchema) {
         // Create the program_name property schema
         Map<String, Object> programNameSchema = new HashMap<>();
         programNameSchema.put("type", "string");
@@ -313,7 +315,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
             // Create a schema with just program_name
             Map<String, Object> props = new HashMap<>();
             props.put("program_name", programNameSchema);
-            return new McpSchema.JsonSchema("object", props, List.of(), null, null, null);
+            return new JsonSchema("object", props, List.of(), null, null, null);
         }
 
         // Get original properties or empty map
@@ -330,7 +332,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
         newProps.put("program_name", programNameSchema);
 
         // Return new schema with augmented properties
-        return new McpSchema.JsonSchema(
+        return new JsonSchema(
             originalSchema.type(),
             newProps,
             originalSchema.required(),
@@ -369,7 +371,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
         if (tool == null) {
             Msg.warn(this, "Tool not found: " + toolName);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Tool not found: " + toolName)
+                .addContent(McpSchema.TextContent.builder("Tool not found: " + toolName).build())
                 .isError(true)
                 .build();
         }
@@ -382,7 +384,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
         if (!isToolEnabled(toolName)) {
             Msg.warn(this, "Tool is disabled: " + toolName);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Tool is disabled: " + toolName)
+                .addContent(McpSchema.TextContent.builder("Tool is disabled: " + toolName).build())
                 .isError(true)
                 .build();
         }
@@ -397,10 +399,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
             Msg.info(this, "Executing tool: " + toolName);
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> inputSchema = schemaMapper.convertValue(
-                getToolInputSchema(tool), Map.class);
-            var validation = schemaValidator.validate(inputSchema, arguments);
+            var validation = schemaValidator.validate(schemaMap(getToolInputSchema(tool)), arguments);
             if (!validation.valid()) {
                 return errorResult("Invalid arguments for " + toolName + ": " + validation.errorMessage());
             }
@@ -468,7 +467,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
         } catch (Exception e) {
             Msg.error(this, "Error executing tool " + toolName, e);
             McpSchema.CallToolResult errorResult = McpSchema.CallToolResult.builder()
-                .addTextContent("Error executing tool " + toolName + ": " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error executing tool " + toolName + ": " + e.getMessage()).build())
                 .isError(true)
                 .build();
 
@@ -495,8 +494,8 @@ public class GhidrAssistMCPBackend implements McpBackend {
             McpTask task = taskManager.getTask((String) arguments.get("task_id"));
             if (task != null && task.getStatus() == McpTask.Status.FAILED) {
                 return task.getResult() != null ? task.getResult()
-                    : new McpSchema.CallToolResult(result.content(), true,
-                        result.structuredContent(), result.meta());
+                    : new McpSchema.CallToolResult(result.content(), result.structuredContent(),
+                        true, result.resultType(), result.meta());
             }
         }
         // Retrieved comments and script source can legitimately begin with error-like text.
@@ -512,12 +511,12 @@ public class GhidrAssistMCPBackend implements McpBackend {
             + "Missing required\\b|No program (?:currently )?(?:loaded|open)|"
             + "Decompilation failed\\b|(?:Function|Variable|Structure|Data type|Task|Program|"
             + "Bookmark|Class|Script).*not found\\b|.*(?:is|are) required\\b).*");
-        return failure ? new McpSchema.CallToolResult(result.content(), true,
-            result.structuredContent(), result.meta()) : result;
+        return failure ? new McpSchema.CallToolResult(result.content(), result.structuredContent(),
+            true, result.resultType(), result.meta()) : result;
     }
 
     private static McpSchema.CallToolResult errorResult(String message) {
-        return McpSchema.CallToolResult.builder().addTextContent(message).isError(true).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(message).build()).isError(true).build();
     }
 
     /**
@@ -545,12 +544,12 @@ public class GhidrAssistMCPBackend implements McpBackend {
 
         // Return task information immediately
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Task submitted for async execution.\n\n" +
+            .addContent(McpSchema.TextContent.builder("Task submitted for async execution.\n\n" +
                 "Task ID: " + task.getTaskId() + "\n" +
                 "Tool: " + toolName + "\n" +
                 "Status: " + task.getStatus() + "\n\n" +
                 "Use get_task_status with this task_id to check progress and retrieve results.\n" +
-                "Use cancel_task to cancel if needed.")
+                "Use cancel_task to cancel if needed.").build())
             .structuredContent(Map.of("task_id", task.getTaskId(), "tool", toolName,
                 "status", task.getStatus().name().toLowerCase(java.util.Locale.ROOT),
                 "poll_interval_ms", 1000))
@@ -734,7 +733,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
                 release.run();
             }
         } catch (IllegalArgumentException error) {
-            throw io.modelcontextprotocol.spec.McpError.RESOURCE_NOT_FOUND.apply(uri);
+            throw McpException.invalidParams("Unknown resource: " + uri, Map.of("uri", uri));
         } finally {
             releaseOperation.run();
         }
@@ -767,16 +766,7 @@ public class GhidrAssistMCPBackend implements McpBackend {
     
     @Override
     public McpSchema.Implementation getServerInfo() {
-        return new McpSchema.Implementation("ghidrassistmcp", "3.0.0");
-    }
-    
-    @Override
-    public McpSchema.ServerCapabilities getCapabilities() {
-        return McpSchema.ServerCapabilities.builder()
-            .tools(true)
-            .resources(false, false)  // subscribe=false, listChanged=false
-            .prompts(false)           // listChanged=false
-            .build();
+        return McpSchema.Implementation.builder("ghidrassistmcp", "3.0.0").build();
     }
     
     /**
@@ -1043,8 +1033,8 @@ public class GhidrAssistMCPBackend implements McpBackend {
                 break;
             }
         }
-        return new McpSchema.CallToolResult(contents, result.isError(),
-            result.structuredContent(), result.meta());
+        return new McpSchema.CallToolResult(contents, result.structuredContent(),
+            result.isError(), result.resultType(), result.meta());
     }
 
     /**
@@ -1131,11 +1121,9 @@ public class GhidrAssistMCPBackend implements McpBackend {
     public List<McpSchema.Tool> getAllTools() {
         List<McpSchema.Tool> toolList = new ArrayList<>();
         for (McpTool tool : tools.values()) {
-            toolList.add(McpSchema.Tool.builder()
-                .name(tool.getName())
+            toolList.add(McpSchema.Tool.builder(tool.getName(), schemaMap(getToolInputSchema(tool)))
                 .title(tool.getName())
                 .description(tool.getDescription())
-                .inputSchema(getToolInputSchema(tool))
                 .outputSchema(getToolOutputSchema(tool))
                 .build());
         }

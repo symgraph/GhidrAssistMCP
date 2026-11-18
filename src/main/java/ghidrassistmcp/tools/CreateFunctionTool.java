@@ -18,7 +18,8 @@ import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.symbol.SourceType;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 public class CreateFunctionTool implements McpTool {
     private final CreateCommandFactory createCommandFactory;
     private final DisassembleCommandFactory disassembleCommandFactory;
@@ -51,8 +52,8 @@ public class CreateFunctionTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("address", Map.of("type", "string",
                     "description", "Entry point address for the function (e.g. '0xC121' or 'C121')")),
@@ -97,8 +98,8 @@ public class CreateFunctionTool implements McpTool {
         Function existing = currentProgram.getFunctionManager().getFunctionAt(entryPoint);
         if (existing != null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function already exists at " + addressStr + ": "
-                    + existing.getName() + " (" + existing.getBody().getNumAddresses() + " bytes)")
+                .addContent(McpSchema.TextContent.builder("Function already exists at " + addressStr + ": "
+                    + existing.getName() + " (" + existing.getBody().getNumAddresses() + " bytes)").build())
                 .build();
         }
 
@@ -133,7 +134,7 @@ public class CreateFunctionTool implements McpTool {
         sb.append("  Cleared existing code/data units: ").append(clearResult.description());
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(sb.toString()).build();
+            .addContent(McpSchema.TextContent.builder(sb.toString()).build()).build();
     }
 
     @Override
@@ -193,7 +194,7 @@ public class CreateFunctionTool implements McpTool {
     }
 
     private static McpSchema.CallToolResult error(String message) {
-        return McpSchema.CallToolResult.builder().addTextContent(message).isError(true).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(message).build()).isError(true).build();
     }
 
     private ClearResult clearExistingCodeUnits(Program program, Address entryPoint, int clearLength)

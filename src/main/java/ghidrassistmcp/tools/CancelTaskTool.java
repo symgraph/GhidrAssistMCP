@@ -9,7 +9,8 @@ import java.util.Map;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that cancels a running async task.
@@ -32,10 +33,10 @@ public class CancelTaskTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "task_id", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "task_id", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("task_id"), null, null, null);
     }
@@ -43,7 +44,7 @@ public class CancelTaskTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Task cancellation requires backend reference. Use execute with backend parameter.")
+            .addContent(McpSchema.TextContent.builder("Task cancellation requires backend reference. Use execute with backend parameter.").build())
             .build();
     }
 
@@ -53,14 +54,14 @@ public class CancelTaskTool implements McpTool {
 
         if (taskId == null || taskId.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("task_id parameter is required")
+                .addContent(McpSchema.TextContent.builder("task_id parameter is required").build())
                 .build();
         }
 
         var taskManager = backend.getTaskManager();
         if (taskManager == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Task manager not available")
+                .addContent(McpSchema.TextContent.builder("Task manager not available").build())
                 .build();
         }
 
@@ -68,12 +69,12 @@ public class CancelTaskTool implements McpTool {
 
         if (cancelled) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully cancelled task: " + taskId)
+                .addContent(McpSchema.TextContent.builder("Successfully cancelled task: " + taskId).build())
                 .build();
         }
         return McpSchema.CallToolResult.builder()
-            .addTextContent("Could not cancel task: " + taskId +
-                ". Task may have already completed or does not exist.")
+            .addContent(McpSchema.TextContent.builder("Could not cancel task: " + taskId +
+                ". Task may have already completed or does not exist.").build())
             .build();
     }
 }

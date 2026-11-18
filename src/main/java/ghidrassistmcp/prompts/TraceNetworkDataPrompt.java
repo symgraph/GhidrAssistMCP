@@ -21,7 +21,7 @@ import ghidra.program.model.symbol.SymbolTable;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Prompt for tracing network send/recv call stacks to analyze protocol
@@ -96,21 +96,9 @@ public class TraceNetworkDataPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument(
-                "function_name",
-                "Name or address of a specific function to analyze (optional - if not provided, analyzes all network functions)",
-                false
-            ),
-            new McpSchema.PromptArgument(
-                "direction",
-                "Filter by direction: 'send', 'recv', or 'both' (default: both)",
-                false
-            ),
-            new McpSchema.PromptArgument(
-                "api",
-                "Filter by API: 'posix', 'winsock', or 'both' (default: both)",
-                false
-            )
+            McpSchema.PromptArgument.builder("function_name").description("Name or address of a specific function to analyze (optional - if not provided, analyzes all network functions)").required(false).build(),
+            McpSchema.PromptArgument.builder("direction").description("Filter by direction: 'send', 'recv', or 'both' (default: both)").required(false).build(),
+            McpSchema.PromptArgument.builder("api").description("Filter by API: 'posix', 'winsock', or 'both' (default: both)").required(false).build()
         );
     }
 
@@ -172,7 +160,7 @@ public class TraceNetworkDataPrompt implements McpPrompt {
         List<McpSchema.PromptMessage> messages = new ArrayList<>();
         messages.add(new McpSchema.PromptMessage(
             McpSchema.Role.USER,
-            new McpSchema.TextContent(context.toString())
+            McpSchema.TextContent.builder(context.toString()).build()
         ));
 
         String description = "Trace network data";
@@ -180,7 +168,7 @@ public class TraceNetworkDataPrompt implements McpPrompt {
             description += " for: " + functionIdentifier;
         }
 
-        return new McpSchema.GetPromptResult(description, messages);
+        return McpSchema.GetPromptResult.builder(messages).description(description).build();
     }
 
     private Map<String, List<Function>> findNetworkFunctions(Program program, String direction, String api) {

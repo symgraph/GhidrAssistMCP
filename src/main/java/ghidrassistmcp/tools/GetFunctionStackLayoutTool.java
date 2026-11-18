@@ -9,7 +9,8 @@ import ghidra.program.model.listing.Program;
 import ghidra.program.model.listing.StackFrame;
 import ghidra.program.model.listing.Variable;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class GetFunctionStackLayoutTool implements McpTool {
 
@@ -23,8 +24,8 @@ public class GetFunctionStackLayoutTool implements McpTool {
     public String getDescription() { return "Get the stack frame layout for a function"; }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of("function_name_or_address", Map.of("type", "string", "description", "Function name or address")),
             List.of("function_name_or_address"), null, null, null);
     }
@@ -32,22 +33,22 @@ public class GetFunctionStackLayoutTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("No program currently loaded").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("No program currently loaded").build()).build();
         }
 
         String identifier = (String) arguments.get("function_name_or_address");
         if (identifier == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("function_name_or_address is required").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("function_name_or_address is required").build()).build();
         }
 
         Function function = findFunction(currentProgram, identifier);
         if (function == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("Function not found: " + identifier).build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("Function not found: " + identifier).build()).build();
         }
 
         StackFrame stackFrame = function.getStackFrame();
         if (stackFrame == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("No stack frame for: " + identifier).build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("No stack frame for: " + identifier).build()).build();
         }
 
         StringBuilder sb = new StringBuilder();
@@ -70,7 +71,7 @@ public class GetFunctionStackLayoutTool implements McpTool {
             }
         }
 
-        return McpSchema.CallToolResult.builder().addTextContent(sb.toString()).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(sb.toString()).build()).build();
     }
 
     private Function findFunction(Program program, String identifier) {

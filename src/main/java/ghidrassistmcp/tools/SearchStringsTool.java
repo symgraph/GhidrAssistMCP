@@ -7,7 +7,8 @@ import ghidra.program.model.listing.Data;
 import ghidra.program.model.listing.DataIterator;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class SearchStringsTool implements McpTool {
 
@@ -21,8 +22,8 @@ public class SearchStringsTool implements McpTool {
     public String getDescription() { return "Search for strings matching a pattern in the program"; }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "pattern", Map.of("type", "string", "description", "Search pattern to match against string content"),
                 "case_sensitive", Map.of("type", "boolean", "description", "Case sensitive search (default false)"),
@@ -34,12 +35,12 @@ public class SearchStringsTool implements McpTool {
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
-            return McpSchema.CallToolResult.builder().addTextContent("No program currently loaded").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("No program currently loaded").build()).build();
         }
 
         String pattern = (String) arguments.get("pattern");
         if (pattern == null || pattern.isEmpty()) {
-            return McpSchema.CallToolResult.builder().addTextContent("pattern is required").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("pattern is required").build()).build();
         }
 
         boolean caseSensitive = Boolean.TRUE.equals(arguments.get("case_sensitive"));
@@ -76,7 +77,7 @@ public class SearchStringsTool implements McpTool {
             result.append("\nFound ").append(count).append(" matching strings");
         }
 
-        return McpSchema.CallToolResult.builder().addTextContent(result.toString()).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(result.toString()).build()).build();
     }
 
     private static String extractStringText(String repr) {

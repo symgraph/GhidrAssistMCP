@@ -12,7 +12,8 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.FunctionIterator;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that lists functions with optional pattern filtering and pagination.
@@ -36,13 +37,13 @@ public class ListFunctionsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "pattern", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "case_sensitive", new McpSchema.JsonSchema("boolean", null, null, null, null, null),
-                "offset", new McpSchema.JsonSchema("integer", null, null, null, null, null),
-                "limit", new McpSchema.JsonSchema("integer", null, null, null, null, null)
+                "pattern", new JsonSchema("string", null, null, null, null, null),
+                "case_sensitive", new JsonSchema("boolean", null, null, null, null, null),
+                "offset", new JsonSchema("integer", null, null, null, null, null),
+                "limit", new JsonSchema("integer", null, null, null, null, null)
             ),
             List.of(), null, null, null);
     }
@@ -51,7 +52,7 @@ public class ListFunctionsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -74,7 +75,7 @@ public class ListFunctionsTool implements McpTool {
 
         String result = listFunctions(currentProgram, pattern, caseSensitive, offset, limit);
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result)
+            .addContent(McpSchema.TextContent.builder(result).build())
             .build();
     }
 

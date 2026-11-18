@@ -8,7 +8,8 @@ import java.util.Map;
 
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that provides detailed information about a specific function.
@@ -31,9 +32,9 @@ public class GetFunctionInfoTool implements McpTool {
     }
     
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", 
-            Map.of("function_name", new McpSchema.JsonSchema("string", null, null, null, null, null)),
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
+            Map.of("function_name", new JsonSchema("string", null, null, null, null, null)),
             List.of("function_name"), null, null, null);
     }
     
@@ -41,20 +42,20 @@ public class GetFunctionInfoTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
         
         String functionName = (String) arguments.get("function_name");
         if (functionName == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function name is required")
+                .addContent(McpSchema.TextContent.builder("Function name is required").build())
                 .build();
         }
         
         String info = getFunctionInfo(currentProgram, functionName);
         return McpSchema.CallToolResult.builder()
-            .addTextContent(info)
+            .addContent(McpSchema.TextContent.builder(info).build())
             .build();
     }
     

@@ -27,7 +27,8 @@ import ghidra.program.model.symbol.SymbolIterator;
 import ghidra.program.model.symbol.SymbolTable;
 import ghidra.program.model.symbol.SymbolType;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool for class operations.
@@ -147,34 +148,34 @@ public class ClassTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
+    public JsonSchema getInputSchema() {
         Map<String, Object> props = new HashMap<>();
         props.put("action", Map.of(
             "type", "string",
             "description", "Class operation to perform",
             "enum", List.of("list", "get_info")
         ));
-        props.put("class_name", new McpSchema.JsonSchema("string", null, null, null, null, null));
-        props.put("pattern", new McpSchema.JsonSchema("string", null, null, null, null, null));
-        props.put("case_sensitive", new McpSchema.JsonSchema("boolean", null, null, null, null, null));
-        props.put("offset", new McpSchema.JsonSchema("integer", null, null, null, null, null));
-        props.put("limit", new McpSchema.JsonSchema("integer", null, null, null, null, null));
+        props.put("class_name", new JsonSchema("string", null, null, null, null, null));
+        props.put("pattern", new JsonSchema("string", null, null, null, null, null));
+        props.put("case_sensitive", new JsonSchema("boolean", null, null, null, null, null));
+        props.put("offset", new JsonSchema("integer", null, null, null, null, null));
+        props.put("limit", new JsonSchema("integer", null, null, null, null, null));
 
-        return new McpSchema.JsonSchema("object", props, List.of("action"), null, null, null);
+        return new JsonSchema("object", props, List.of("action"), null, null, null);
     }
 
     @Override
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String action = (String) arguments.get("action");
         if (action == null || action.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("action parameter is required ('list' or 'get_info')")
+                .addContent(McpSchema.TextContent.builder("action parameter is required ('list' or 'get_info')").build())
                 .build();
         }
 
@@ -187,7 +188,7 @@ public class ClassTool implements McpTool {
                 return executeGetInfo(arguments, currentProgram);
             default:
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid action. Use 'list' or 'get_info'")
+                    .addContent(McpSchema.TextContent.builder("Invalid action. Use 'list' or 'get_info'").build())
                     .build();
         }
     }
@@ -261,7 +262,7 @@ public class ClassTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 
@@ -271,7 +272,7 @@ public class ClassTool implements McpTool {
         String className = (String) arguments.get("class_name");
         if (className == null || className.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("class_name parameter is required for get_info action")
+                .addContent(McpSchema.TextContent.builder("class_name parameter is required for get_info action").build())
                 .build();
         }
 
@@ -279,7 +280,7 @@ public class ClassTool implements McpTool {
         String result = formatClassMembers(className, members);
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result)
+            .addContent(McpSchema.TextContent.builder(result).build())
             .build();
     }
 

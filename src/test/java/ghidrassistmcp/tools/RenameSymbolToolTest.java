@@ -34,7 +34,7 @@ import ghidra.program.model.symbol.SymbolTable;
 import ghidra.program.model.symbol.SymbolType;
 import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.exception.InvalidInputException;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class RenameSymbolToolTest {
     @Test

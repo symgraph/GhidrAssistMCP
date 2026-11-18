@@ -19,7 +19,8 @@ import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that sets the data type of a local variable within a function.
@@ -53,12 +54,12 @@ public class SetLocalVariableTypeTool implements McpTool {
     }
     
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", 
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "function_name", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "variable_name", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "data_type", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "function_name", new JsonSchema("string", null, null, null, null, null),
+                "variable_name", new JsonSchema("string", null, null, null, null, null),
+                "data_type", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("function_name", "variable_name", "data_type"), null, null, null);
     }
@@ -67,7 +68,7 @@ public class SetLocalVariableTypeTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
         
@@ -77,7 +78,7 @@ public class SetLocalVariableTypeTool implements McpTool {
         
         if (functionName == null || variableName == null || dataTypeName == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("function_name, variable_name, and data_type are all required")
+                .addContent(McpSchema.TextContent.builder("function_name, variable_name, and data_type are all required").build())
                 .build();
         }
         
@@ -85,7 +86,7 @@ public class SetLocalVariableTypeTool implements McpTool {
         Function function = findFunctionByName(currentProgram, functionName);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionName)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                 .build();
         }
         
@@ -98,8 +99,8 @@ public class SetLocalVariableTypeTool implements McpTool {
         }
         if (dataType == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Data type not found: " + dataTypeName + 
-                              ". Use built-in types like 'int', 'char', 'void*', etc.")
+                .addContent(McpSchema.TextContent.builder("Data type not found: " + dataTypeName +
+                              ". Use built-in types like 'int', 'char', 'void*', etc.").build())
                 .build();
         }
         
@@ -110,20 +111,20 @@ public class SetLocalVariableTypeTool implements McpTool {
             
             if (results.isTimedOut()) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Decompilation timed out for function: " + functionName)
+                    .addContent(McpSchema.TextContent.builder("Decompilation timed out for function: " + functionName).build())
                     .build();
             }
             
             if (results.isValid() == false) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Decompilation error for function " + functionName + ": " + results.getErrorMessage())
+                    .addContent(McpSchema.TextContent.builder("Decompilation error for function " + functionName + ": " + results.getErrorMessage()).build())
                     .build();
             }
             
             HighFunction highFunction = results.getHighFunction();
             if (highFunction == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Could not get high function for: " + functionName)
+                    .addContent(McpSchema.TextContent.builder("Could not get high function for: " + functionName).build())
                     .build();
             }
             
@@ -141,7 +142,7 @@ public class SetLocalVariableTypeTool implements McpTool {
             
             if (targetSymbol == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Variable '" + variableName + "' not found in function '" + functionName + "'")
+                    .addContent(McpSchema.TextContent.builder("Variable '" + variableName + "' not found in function '" + functionName + "'").build())
                     .build();
             }
             
@@ -154,25 +155,25 @@ public class SetLocalVariableTypeTool implements McpTool {
                     String currentTypeName = currentType != null ? currentType.getName() : "unknown";
                     
                     return McpSchema.CallToolResult.builder()
-                        .addTextContent("Variable '" + variableName + "' in function '" + functionName + 
+                        .addContent(McpSchema.TextContent.builder("Variable '" + variableName + "' in function '" + functionName +
                                       "' currently has type: " + currentTypeName + 
                                       ". Requested type: " + dataType.getName() + 
-                                      " (Type setting not fully implemented - changes may not persist)")
+                                      " (Type setting not fully implemented - changes may not persist)").build())
                         .build();
                 }
 				return McpSchema.CallToolResult.builder()
-				    .addTextContent("Cannot access type for variable '" + variableName + 
-				                  "' - no high variable available")
+				    .addContent(McpSchema.TextContent.builder("Cannot access type for variable '" + variableName +
+				                  "' - no high variable available").build())
 				    .build();
             } catch (Exception e) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Error accessing variable type: " + e.getMessage())
+                    .addContent(McpSchema.TextContent.builder("Error accessing variable type: " + e.getMessage()).build())
                     .build();
             }
             
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error processing function: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error processing function: " + e.getMessage()).build())
                 .build();
         }
     }

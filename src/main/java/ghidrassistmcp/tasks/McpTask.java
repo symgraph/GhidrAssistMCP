@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Represents an asynchronous MCP task with its state and result.
@@ -195,7 +195,7 @@ public class McpTask {
     public McpSchema.CallToolResult toPendingResult() {
         String taskStatus = status.name().toLowerCase(java.util.Locale.ROOT);
         return McpSchema.CallToolResult.builder()
-            .addTextContent("task_id=" + taskId + " status=" + taskStatus)
+            .addContent(McpSchema.TextContent.builder("task_id=" + taskId + " status=" + taskStatus).build())
             .structuredContent(Map.of("task_id", taskId, "tool", toolName,
                 "status", taskStatus,
                 "poll_interval_ms", 1000))

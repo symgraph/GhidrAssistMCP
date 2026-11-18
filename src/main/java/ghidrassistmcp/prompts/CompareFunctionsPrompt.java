@@ -9,7 +9,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 public class CompareFunctionsPrompt implements McpPrompt {
 
@@ -28,8 +28,8 @@ public class CompareFunctionsPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument("func1", "First function name or address", true),
-            new McpSchema.PromptArgument("func2", "Second function name or address", true)
+            McpSchema.PromptArgument.builder("func1").description("First function name or address").required(true).build(),
+            McpSchema.PromptArgument.builder("func2").description("Second function name or address").required(true).build()
         );
     }
 
@@ -66,8 +66,7 @@ public class CompareFunctionsPrompt implements McpPrompt {
         context.append("3. **Key Similarities**: Shared patterns\n");
         context.append("4. **Assessment**: Related? (duplicate, patched, different implementation?)\n");
 
-        return new McpSchema.GetPromptResult("Compare: " + func1 + " vs " + func2,
-            List.of(new McpSchema.PromptMessage(McpSchema.Role.USER, new McpSchema.TextContent(context.toString()))));
+        return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(McpSchema.Role.USER, McpSchema.TextContent.builder(context.toString()).build()))).description("Compare: " + func1 + " vs " + func2).build();
     }
 
     private void appendFunctionContext(StringBuilder context, Program program, String identifier, String label) {

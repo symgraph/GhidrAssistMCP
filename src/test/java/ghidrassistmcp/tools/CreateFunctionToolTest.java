@@ -28,7 +28,7 @@ import ghidra.program.model.symbol.Namespace;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.program.model.symbol.SymbolTable;
 import ghidra.util.exception.InvalidInputException;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class CreateFunctionToolTest {
     @Test

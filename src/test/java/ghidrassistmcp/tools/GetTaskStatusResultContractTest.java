@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.tasks.McpTask;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class GetTaskStatusResultContractTest {
     private final GhidrAssistMCPBackend backend = new GhidrAssistMCPBackend();
@@ -50,7 +50,7 @@ class GetTaskStatusResultContractTest {
     @Test
     void failedPollRetainsTheOriginalToolResultAndStructuredErrorDetails() throws Exception {
         var failure = McpSchema.CallToolResult.builder()
-            .addTextContent("Original tool failure")
+            .addContent(McpSchema.TextContent.builder("Original tool failure").build())
             .structuredContent(Map.of("code", "fixture_failure", "detail", "original detail"))
             .isError(true).build();
         McpTask task = backend.getTaskManager().submitTask("failed", Map.of(), ignored -> failure);
@@ -68,7 +68,7 @@ class GetTaskStatusResultContractTest {
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
             }
-            return McpSchema.CallToolResult.builder().addTextContent("Completed").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("Completed").build()).build();
         });
         assertTrue(entered.await(2, TimeUnit.SECONDS), "The task did not start");
         return task;

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import ghidra.program.model.listing.Program;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Interface for MCP prompts that provide pre-built analysis workflows.

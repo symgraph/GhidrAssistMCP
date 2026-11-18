@@ -13,7 +13,8 @@ import ghidra.program.model.listing.CommentType;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that sets comments on functions or addresses.
@@ -42,8 +43,8 @@ public class SetCommentTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "target", Map.of(
                     "type", "string",
@@ -76,7 +77,7 @@ public class SetCommentTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -85,20 +86,20 @@ public class SetCommentTool implements McpTool {
 
         if (target == null || target.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("target parameter is required ('function' or 'address')")
+                .addContent(McpSchema.TextContent.builder("target parameter is required ('function' or 'address')").build())
                 .build();
         }
 
         if (comment == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("comment parameter is required")
+                .addContent(McpSchema.TextContent.builder("comment parameter is required").build())
                 .build();
         }
 
         target = target.toLowerCase();
         if (!target.equals("function") && !target.equals("address")) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid target. Use 'function' or 'address'")
+                .addContent(McpSchema.TextContent.builder("Invalid target. Use 'function' or 'address'").build())
                 .build();
         }
 
@@ -117,7 +118,7 @@ public class SetCommentTool implements McpTool {
 
         if (functionName == null || functionName.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("function_name parameter is required when target is 'function'")
+                .addContent(McpSchema.TextContent.builder("function_name parameter is required when target is 'function'").build())
                 .build();
         }
 
@@ -125,7 +126,7 @@ public class SetCommentTool implements McpTool {
         Function function = findFunctionByName(program, functionName);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionName)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                 .build();
         }
 
@@ -136,13 +137,13 @@ public class SetCommentTool implements McpTool {
             program.endTransaction(transactionID, true);
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully set decompiler comment on function '" + functionName +
-                              "': \"" + comment + "\"")
+                .addContent(McpSchema.TextContent.builder("Successfully set decompiler comment on function '" + functionName +
+                              "': \"" + comment + "\"").build())
                 .build();
         } catch (Exception e) {
             program.endTransaction(transactionID, false);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error setting function comment: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error setting function comment: " + e.getMessage()).build())
                 .build();
         }
     }
@@ -156,7 +157,7 @@ public class SetCommentTool implements McpTool {
 
         if (addressStr == null || addressStr.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("address parameter is required when target is 'address'")
+                .addContent(McpSchema.TextContent.builder("address parameter is required when target is 'address'").build())
                 .build();
         }
 
@@ -166,12 +167,12 @@ public class SetCommentTool implements McpTool {
             address = program.getAddressFactory().getAddress(addressStr);
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid address format: " + addressStr)
+                .addContent(McpSchema.TextContent.builder("Invalid address format: " + addressStr).build())
                 .build();
         }
 
@@ -182,7 +183,7 @@ public class SetCommentTool implements McpTool {
         CodeUnit codeUnit = program.getListing().getCodeUnitAt(address);
         if (codeUnit == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No code unit found at address: " + addressStr)
+                .addContent(McpSchema.TextContent.builder("No code unit found at address: " + addressStr).build())
                 .build();
         }
 
@@ -194,13 +195,13 @@ public class SetCommentTool implements McpTool {
 
             String commentTypeName = getCommentTypeName(commentType);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Successfully set " + commentTypeName + " comment at " + addressStr +
-                              ": \"" + comment + "\"")
+                .addContent(McpSchema.TextContent.builder("Successfully set " + commentTypeName + " comment at " + addressStr +
+                              ": \"" + comment + "\"").build())
                 .build();
         } catch (Exception e) {
             program.endTransaction(transactionID, false);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error setting comment: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error setting comment: " + e.getMessage()).build())
                 .build();
         }
     }

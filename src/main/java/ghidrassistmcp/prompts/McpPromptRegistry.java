@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Registry for MCP prompts that can be queried by clients.
@@ -58,13 +58,10 @@ public class McpPromptRegistry {
         McpPrompt prompt = prompts.get(name);
         if (prompt == null) {
             Msg.warn(this, "Prompt not found: " + name);
-            return new McpSchema.GetPromptResult(
-                "Error: Prompt not found: " + name,
-                List.of(new McpSchema.PromptMessage(
+            return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(
                     McpSchema.Role.USER,
-                    new McpSchema.TextContent("Error: Prompt not found: " + name)
-                ))
-            );
+                    McpSchema.TextContent.builder("Error: Prompt not found: " + name).build()
+                ))).description("Error: Prompt not found: " + name).build();
         }
 
         return prompt.generatePrompt(arguments, program);

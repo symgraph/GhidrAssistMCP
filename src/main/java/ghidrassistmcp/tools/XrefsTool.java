@@ -16,7 +16,8 @@ import ghidra.program.model.symbol.Reference;
 import ghidra.program.model.symbol.ReferenceIterator;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that gets cross-references to and/or from an address or function.
@@ -41,8 +42,8 @@ public class XrefsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("address", Map.of(
                     "type", "string",
@@ -80,7 +81,7 @@ public class XrefsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -100,14 +101,14 @@ public class XrefsTool implements McpTool {
 
         if (!direction.equals("to") && !direction.equals("from") && !direction.equals("both")) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid direction. Use 'to', 'from', or 'both'")
+                .addContent(McpSchema.TextContent.builder("Invalid direction. Use 'to', 'from', or 'both'").build())
                 .build();
         }
 
         // Check that at least one of address or function is provided
         if ((addressStr == null || addressStr.isEmpty()) && (functionName == null || functionName.isEmpty())) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Either 'address' or 'function' parameter is required")
+                .addContent(McpSchema.TextContent.builder("Either 'address' or 'function' parameter is required").build())
                 .build();
         }
 
@@ -143,12 +144,12 @@ public class XrefsTool implements McpTool {
             address = program.getAddressFactory().getAddress(addressStr);
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error parsing address: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error parsing address: " + e.getMessage()).build())
                 .build();
         }
 
@@ -197,7 +198,7 @@ public class XrefsTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 
@@ -209,7 +210,7 @@ public class XrefsTool implements McpTool {
         Function function = findFunctionByName(program, functionName);
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionName)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                 .build();
         }
 
@@ -273,7 +274,7 @@ public class XrefsTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 
@@ -296,7 +297,7 @@ public class XrefsTool implements McpTool {
         }
         if (function == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Function not found: " + functionName)
+                .addContent(McpSchema.TextContent.builder("Function not found: " + functionName).build())
                 .build();
         }
 
@@ -320,7 +321,7 @@ public class XrefsTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

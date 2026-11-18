@@ -11,7 +11,8 @@ import ghidrassistmcp.McpTool;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.tasks.McpTask;
 import ghidra.util.task.TaskMonitorAdapter;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 class ExplicitToolTest {
     @Test void operationCannotBeOverriddenAndSchemaOnlyExposesRelevantInputs() {
@@ -65,8 +66,8 @@ class ExplicitToolTest {
             @Override public String getName() { return "legacy_analysis"; }
             @Override public String getDescription() { return "Task-aware analysis"; }
             @Override public boolean supportsRequestMonitoring() { return true; }
-            @Override public McpSchema.JsonSchema getInputSchema() {
-                return new McpSchema.JsonSchema("object", Map.of("target", Map.of("type", "string"),
+            @Override public JsonSchema getInputSchema() {
+                return new JsonSchema("object", Map.of("target", Map.of("type", "string"),
                     "mode", Map.of("type", "string")), List.of("target", "mode"), false, null, null);
             }
             @Override public McpSchema.CallToolResult execute(Map<String, Object> args, Program program) {
@@ -77,7 +78,7 @@ class ExplicitToolTest {
                 calls.incrementAndGet(); received.set(args);
                 assertEquals(McpTask.Status.RUNNING, task.getStatus());
                 task.updateProgress(40, "Analyzing translated target");
-                return McpSchema.CallToolResult.builder().addTextContent("Analyzed").build();
+                return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("Analyzed").build()).build();
             }
         };
         ExplicitTool canonical = new ExplicitTool(implementation, "analyze_target", "Analyze target")
@@ -97,14 +98,14 @@ class ExplicitToolTest {
         @Override public String getDescription() { return "Legacy test"; }
         @Override public boolean isReadOnly() { return false; }
         @Override public boolean isDestructive() { return true; }
-        @Override public McpSchema.JsonSchema getInputSchema() {
-            return new McpSchema.JsonSchema("object", Map.of(
+        @Override public JsonSchema getInputSchema() {
+            return new JsonSchema("object", Map.of(
                 "function", Map.of("type", "string"), "format", Map.of("type", "string"),
                 "len", Map.of("type", "number"), "comment", Map.of("type", "string")), List.of("function", "format"), null, null, null);
         }
         @Override public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program program) {
             lastArguments = arguments;
-            return McpSchema.CallToolResult.builder().addTextContent("ok").build();
+            return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("ok").build()).build();
         }
     }
 }

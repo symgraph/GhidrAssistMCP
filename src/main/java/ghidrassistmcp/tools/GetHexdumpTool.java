@@ -11,7 +11,8 @@ import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.Memory;
 import ghidra.program.model.mem.MemoryAccessException;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that retrieves a hexdump of memory at a specific address.
@@ -33,11 +34,11 @@ public class GetHexdumpTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "address", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "len", new McpSchema.JsonSchema("number", null, null, null, null, null)
+                "address", new JsonSchema("string", null, null, null, null, null),
+                "len", new JsonSchema("number", null, null, null, null, null)
             ),
             List.of("address", "len"), null, null, null);
     }
@@ -46,7 +47,7 @@ public class GetHexdumpTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
@@ -54,7 +55,7 @@ public class GetHexdumpTool implements McpTool {
         String addressStr = (String) arguments.get("address");
         if (addressStr == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("address parameter is required")
+                .addContent(McpSchema.TextContent.builder("address parameter is required").build())
                 .build();
         }
 
@@ -62,7 +63,7 @@ public class GetHexdumpTool implements McpTool {
         Object lenObj = arguments.get("len");
         if (lenObj == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("len parameter is required")
+                .addContent(McpSchema.TextContent.builder("len parameter is required").build())
                 .build();
         }
 
@@ -77,25 +78,25 @@ public class GetHexdumpTool implements McpTool {
                 length = ((Long) lenObj).intValue();
             } else {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("len parameter must be a number")
+                    .addContent(McpSchema.TextContent.builder("len parameter must be a number").build())
                     .build();
             }
 
             if (length <= 0) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("len must be greater than 0")
+                    .addContent(McpSchema.TextContent.builder("len must be greater than 0").build())
                     .build();
             }
 
             // Limit maximum length to prevent excessive output
             if (length > 65536) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("len exceeds maximum allowed value of 65536 bytes")
+                    .addContent(McpSchema.TextContent.builder("len exceeds maximum allowed value of 65536 bytes").build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid len parameter: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Invalid len parameter: " + e.getMessage()).build())
                 .build();
         }
 
@@ -105,12 +106,12 @@ public class GetHexdumpTool implements McpTool {
             address = currentProgram.getAddressFactory().getAddress(addressStr);
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid address format: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address format: " + addressStr).build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Invalid address format: " + addressStr + " - " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Invalid address format: " + addressStr + " - " + e.getMessage()).build())
                 .build();
         }
 
@@ -118,11 +119,11 @@ public class GetHexdumpTool implements McpTool {
         try {
             String hexdump = generateHexdump(currentProgram, address, length);
             return McpSchema.CallToolResult.builder()
-                .addTextContent(hexdump)
+                .addContent(McpSchema.TextContent.builder(hexdump).build())
                 .build();
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error generating hexdump: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error generating hexdump: " + e.getMessage()).build())
                 .build();
         }
     }

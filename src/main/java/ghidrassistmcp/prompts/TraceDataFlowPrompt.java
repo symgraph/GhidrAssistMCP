@@ -13,7 +13,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 /**
  * Prompt for tracing data flow through a function or variable.
@@ -39,16 +39,8 @@ public class TraceDataFlowPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument(
-                "function_name",
-                "Name or address of the function to trace",
-                true
-            ),
-            new McpSchema.PromptArgument(
-                "variable",
-                "Specific variable or parameter to trace (optional)",
-                false
-            )
+            McpSchema.PromptArgument.builder("function_name").description("Name or address of the function to trace").required(true).build(),
+            McpSchema.PromptArgument.builder("variable").description("Specific variable or parameter to trace (optional)").required(false).build()
         );
     }
 
@@ -58,13 +50,10 @@ public class TraceDataFlowPrompt implements McpPrompt {
         String variable = arguments.get("variable");
 
         if (functionIdentifier == null || functionIdentifier.isEmpty()) {
-            return new McpSchema.GetPromptResult(
-                "Error: function_name argument is required",
-                List.of(new McpSchema.PromptMessage(
+            return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(
                     McpSchema.Role.USER,
-                    new McpSchema.TextContent("Error: function_name argument is required")
-                ))
-            );
+                    McpSchema.TextContent.builder("Error: function_name argument is required").build()
+                ))).description("Error: function_name argument is required").build();
         }
 
         StringBuilder context = new StringBuilder();
@@ -165,13 +154,10 @@ public class TraceDataFlowPrompt implements McpPrompt {
         List<McpSchema.PromptMessage> messages = new ArrayList<>();
         messages.add(new McpSchema.PromptMessage(
             McpSchema.Role.USER,
-            new McpSchema.TextContent(context.toString())
+            McpSchema.TextContent.builder(context.toString()).build()
         ));
 
-        return new McpSchema.GetPromptResult(
-            "Trace data flow: " + functionIdentifier + (variable != null ? " (var: " + variable + ")" : ""),
-            messages
-        );
+        return McpSchema.GetPromptResult.builder(messages).description("Trace data flow: " + functionIdentifier + (variable != null ? " (var: " + variable + ")" : "")).build();
     }
 
     private Function findFunction(Program program, String identifier) {

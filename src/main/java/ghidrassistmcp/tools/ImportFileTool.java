@@ -28,7 +28,8 @@ import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.GhidrAssistMCPManager;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that imports a binary file into the active Ghidra project.
@@ -71,8 +72,8 @@ public class ImportFileTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("file_path", Map.of(
                     "type", "string",
@@ -232,7 +233,7 @@ public class ImportFileTool implements McpTool {
             }
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent(result.toString())
+                .addContent(McpSchema.TextContent.builder(result.toString()).build())
                 .build();
         }
     }
@@ -269,7 +270,7 @@ public class ImportFileTool implements McpTool {
             }
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent(result.toString())
+                .addContent(McpSchema.TextContent.builder(result.toString()).build())
                 .build();
         }
     }
@@ -332,7 +333,7 @@ public class ImportFileTool implements McpTool {
 
     private static McpSchema.CallToolResult textResult(String message) {
         return McpSchema.CallToolResult.builder()
-            .addTextContent(message)
+            .addContent(McpSchema.TextContent.builder(message).build())
             .build();
     }
 

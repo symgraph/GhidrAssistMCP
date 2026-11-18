@@ -9,7 +9,8 @@ import java.util.Map;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.MemoryBlock;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that lists memory segments/blocks in the program.
@@ -27,11 +28,11 @@ public class ListSegmentsTool implements McpTool {
     }
     
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object", 
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "offset", new McpSchema.JsonSchema("integer", null, null, null, null, null),
-                "limit", new McpSchema.JsonSchema("integer", null, null, null, null, null)
+                "offset", new JsonSchema("integer", null, null, null, null, null),
+                "limit", new JsonSchema("integer", null, null, null, null, null)
             ),
             List.of(), null, null, null);
     }
@@ -40,7 +41,7 @@ public class ListSegmentsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
         
@@ -92,7 +93,7 @@ public class ListSegmentsTool implements McpTool {
         }
         
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 }

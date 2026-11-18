@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ghidra.program.model.listing.Program;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class RenameSymbolBatchToolTest {
     @Test void compactJsonPreservesAllFieldsFailureMessagesAndEscaping() throws Exception {

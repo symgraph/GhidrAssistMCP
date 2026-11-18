@@ -20,7 +20,8 @@ import ghidra.program.model.data.TypeDef;
 import ghidra.program.model.data.Union;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that retrieves detailed information about a specific data type,
@@ -44,11 +45,11 @@ public class GetDataTypeTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
-                "name", new McpSchema.JsonSchema("string", null, null, null, null, null),
-                "category", new McpSchema.JsonSchema("string", null, null, null, null, null)
+                "name", new JsonSchema("string", null, null, null, null, null),
+                "category", new JsonSchema("string", null, null, null, null, null)
             ),
             List.of("name"), null, null, null);
     }
@@ -57,14 +58,14 @@ public class GetDataTypeTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String name = (String) arguments.get("name");
         if (name == null || name.trim().isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("name parameter is required")
+                .addContent(McpSchema.TextContent.builder("name parameter is required").build())
                 .build();
         }
 
@@ -98,8 +99,8 @@ public class GetDataTypeTool implements McpTool {
 
         if (dataType == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Data type not found: " + name +
-                    (category != null ? " in category: " + category : ""))
+                .addContent(McpSchema.TextContent.builder("Data type not found: " + name +
+                    (category != null ? " in category: " + category : "")).build())
                 .build();
         }
 
@@ -142,7 +143,7 @@ public class GetDataTypeTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

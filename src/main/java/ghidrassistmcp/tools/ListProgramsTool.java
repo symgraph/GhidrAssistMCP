@@ -10,7 +10,8 @@ import ghidra.framework.model.DomainFile;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.GhidrAssistMCPBackend;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool that lists all currently open programs in Ghidra.
@@ -35,8 +36,8 @@ public class ListProgramsTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(),
             List.of(), null, null, null);
     }
@@ -45,7 +46,7 @@ public class ListProgramsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         // This tool needs the backend to access all programs
         return McpSchema.CallToolResult.builder()
-            .addTextContent("This tool requires backend context. No programs available.")
+            .addContent(McpSchema.TextContent.builder("This tool requires backend context. No programs available.").build())
             .build();
     }
 
@@ -53,7 +54,7 @@ public class ListProgramsTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram, GhidrAssistMCPBackend backend) {
         if (backend == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Backend context not available")
+                .addContent(McpSchema.TextContent.builder("Backend context not available").build())
                 .build();
         }
 
@@ -62,8 +63,8 @@ public class ListProgramsTool implements McpTool {
 
         if (programs.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No programs currently open in Ghidra.\n\n" +
-                    "Please open a binary file in Ghidra before using MCP tools.")
+                .addContent(McpSchema.TextContent.builder("No programs currently open in Ghidra.\n\n" +
+                    "Please open a binary file in Ghidra before using MCP tools.").build())
                 .build();
         }
 
@@ -100,7 +101,7 @@ public class ListProgramsTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 

@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class McpTaskManagerTest {
     private final McpTaskManager manager = new McpTaskManager(1);
@@ -74,7 +74,7 @@ class McpTaskManagerTest {
     @Test
     void toolErrorIsFailedAndRetainsItsMcpResult() throws Exception {
         McpSchema.CallToolResult error = McpSchema.CallToolResult.builder()
-            .addTextContent("Function not found").isError(true).build();
+            .addContent(McpSchema.TextContent.builder("Function not found").build()).isError(true).build();
         CountDownLatch released = new CountDownLatch(1);
         McpTask task = manager.submitTask("failure", Map.of(), McpProgramContext.empty(),
             ignored -> error, released::countDown);
@@ -158,7 +158,7 @@ class McpTaskManagerTest {
     }
 
     private static McpSchema.CallToolResult success() {
-        return McpSchema.CallToolResult.builder().addTextContent("complete").build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder("complete").build()).build();
     }
 
     private static void awaitUninterruptibly(CountDownLatch latch) {

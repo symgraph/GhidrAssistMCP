@@ -13,7 +13,8 @@ import ghidra.program.model.listing.BookmarkManager;
 import ghidra.program.model.listing.BookmarkType;
 import ghidra.program.model.listing.Program;
 import ghidrassistmcp.McpTool;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 /**
  * MCP tool for listing, adding, and deleting bookmarks.
@@ -42,8 +43,8 @@ public class BookmarksTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.of(
                 "action", Map.of(
                     "type", "string",
@@ -74,14 +75,14 @@ public class BookmarksTool implements McpTool {
     public McpSchema.CallToolResult execute(Map<String, Object> arguments, Program currentProgram) {
         if (currentProgram == null) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("No program currently loaded")
+                .addContent(McpSchema.TextContent.builder("No program currently loaded").build())
                 .build();
         }
 
         String action = (String) arguments.get("action");
         if (action == null || action.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Action is required: 'list', 'add', or 'delete'")
+                .addContent(McpSchema.TextContent.builder("Action is required: 'list', 'add', or 'delete'").build())
                 .build();
         }
 
@@ -100,7 +101,7 @@ public class BookmarksTool implements McpTool {
 
             default:
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid action: " + action + ". Use 'list', 'set', or 'remove'")
+                    .addContent(McpSchema.TextContent.builder("Invalid action: " + action + ". Use 'list', 'set', or 'remove'").build())
                     .build();
         }
     }
@@ -148,7 +149,7 @@ public class BookmarksTool implements McpTool {
         }
 
         return McpSchema.CallToolResult.builder()
-            .addTextContent(result.toString())
+            .addContent(McpSchema.TextContent.builder(result.toString()).build())
             .build();
     }
 
@@ -161,7 +162,7 @@ public class BookmarksTool implements McpTool {
 
         if (addressStr == null || addressStr.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Address is required to add a bookmark")
+                .addContent(McpSchema.TextContent.builder("Address is required to add a bookmark").build())
                 .build();
         }
 
@@ -182,12 +183,12 @@ public class BookmarksTool implements McpTool {
             address = program.getAddressFactory().getAddress(addressStr);
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error parsing address: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error parsing address: " + e.getMessage()).build())
                 .build();
         }
 
@@ -197,13 +198,13 @@ public class BookmarksTool implements McpTool {
             program.endTransaction(txId, true);
 
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Added bookmark at " + addressStr + " [" + type + "] (" + category + "): " + comment)
+                .addContent(McpSchema.TextContent.builder("Added bookmark at " + addressStr + " [" + type + "] (" + category + "): " + comment).build())
                 .build();
 
         } catch (Exception e) {
             program.endTransaction(txId, false);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error adding bookmark: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error adding bookmark: " + e.getMessage()).build())
                 .build();
         }
     }
@@ -215,7 +216,7 @@ public class BookmarksTool implements McpTool {
 
         if (addressStr == null || addressStr.isEmpty()) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Address is required to delete a bookmark")
+                .addContent(McpSchema.TextContent.builder("Address is required to delete a bookmark").build())
                 .build();
         }
 
@@ -224,12 +225,12 @@ public class BookmarksTool implements McpTool {
             address = program.getAddressFactory().getAddress(addressStr);
             if (address == null) {
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("Invalid address: " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("Invalid address: " + addressStr).build())
                     .build();
             }
         } catch (Exception e) {
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error parsing address: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error parsing address: " + e.getMessage()).build())
                 .build();
         }
 
@@ -246,7 +247,7 @@ public class BookmarksTool implements McpTool {
             if (bookmarks.length == 0) {
                 program.endTransaction(txId, false);
                 return McpSchema.CallToolResult.builder()
-                    .addTextContent("No bookmarks found at " + addressStr)
+                    .addContent(McpSchema.TextContent.builder("No bookmarks found at " + addressStr).build())
                     .build();
             }
 
@@ -256,13 +257,13 @@ public class BookmarksTool implements McpTool {
 
             program.endTransaction(txId, true);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Deleted " + bookmarks.length + " bookmark(s) at " + addressStr)
+                .addContent(McpSchema.TextContent.builder("Deleted " + bookmarks.length + " bookmark(s) at " + addressStr).build())
                 .build();
 
         } catch (Exception e) {
             program.endTransaction(txId, false);
             return McpSchema.CallToolResult.builder()
-                .addTextContent("Error deleting bookmark: " + e.getMessage())
+                .addContent(McpSchema.TextContent.builder("Error deleting bookmark: " + e.getMessage()).build())
                 .build();
         }
     }

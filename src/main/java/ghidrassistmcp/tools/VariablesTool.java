@@ -32,7 +32,8 @@ import ghidra.util.task.TaskMonitor;
 import ghidrassistmcp.McpTool;
 import ghidrassistmcp.decompiler.DecompilerService;
 import ghidrassistmcp.decompiler.DecompilerSession;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
+import ghidrassistmcp.protocol.JsonSchema;
 
 public class VariablesTool implements McpTool {
 
@@ -72,8 +73,8 @@ public class VariablesTool implements McpTool {
     }
 
     @Override
-    public McpSchema.JsonSchema getInputSchema() {
-        return new McpSchema.JsonSchema("object",
+    public JsonSchema getInputSchema() {
+        return new JsonSchema("object",
             Map.ofEntries(
                 Map.entry("action", Map.of(
                     "type", "string",
@@ -358,9 +359,9 @@ public class VariablesTool implements McpTool {
             return result("Failed on Swing thread: " + e.getMessage());
         }
 
-        return McpSchema.CallToolResult.builder().addTextContent(success.get() ?
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(success.get() ?
             "Successfully set function prototype: " + prototype :
-            "Failed: " + errorMessage.toString()).isError(!success.get()).build();
+            "Failed: " + errorMessage.toString()).build()).isError(!success.get()).build();
     }
 
     @FunctionalInterface
@@ -397,6 +398,6 @@ public class VariablesTool implements McpTool {
     }
 
     private static McpSchema.CallToolResult result(String text) {
-        return McpSchema.CallToolResult.builder().addTextContent(text).build();
+        return McpSchema.CallToolResult.builder().addContent(McpSchema.TextContent.builder(text).build()).build();
     }
 }

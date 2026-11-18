@@ -11,7 +11,7 @@ import ghidra.program.model.address.GenericAddressSpace;
 import ghidra.program.model.listing.CodeUnit;
 import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 class CommentsToolTest {
     @Test void invalidCommentAddressReturnsTypedError() {

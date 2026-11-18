@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import ghidra.program.model.listing.Program;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.modern.McpSchema;
 
 public class ReverseEngineerStructPrompt implements McpPrompt {
 
@@ -17,7 +17,7 @@ public class ReverseEngineerStructPrompt implements McpPrompt {
     @Override
     public List<McpSchema.PromptArgument> getArguments() {
         return List.of(
-            new McpSchema.PromptArgument("address", "Address where structure is used", true)
+            McpSchema.PromptArgument.builder("address").description("Address where structure is used").required(true).build()
         );
     }
 
@@ -55,7 +55,6 @@ public class ReverseEngineerStructPrompt implements McpPrompt {
         context.append("} StructureName;\n```\n\n");
         context.append("Then call `create_structure` to define it.\n");
 
-        return new McpSchema.GetPromptResult("Reverse engineer struct at " + address,
-            List.of(new McpSchema.PromptMessage(McpSchema.Role.USER, new McpSchema.TextContent(context.toString()))));
+        return McpSchema.GetPromptResult.builder(List.of(new McpSchema.PromptMessage(McpSchema.Role.USER, McpSchema.TextContent.builder(context.toString()).build()))).description("Reverse engineer struct at " + address).build();
     }
 }
