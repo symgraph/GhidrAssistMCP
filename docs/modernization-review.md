@@ -114,11 +114,13 @@ The GUI controller writes one private project SaveState checkpoint (`GhidrAssist
 
 ## MCP protocol and execution contracts
 
-The server uses stable Java SDK 2.0.1. Streamable HTTP at `/mcp` is the primary endpoint; `/sse` and `/message` provide compatibility with existing clients. Streamable HTTP negotiates `2025-11-25`; legacy SSE retains `2024-11-05`. The dependency build excludes historical copies from generated `lib/`. The selected SDK, Jackson, schema validator, Jetty, Servlet, Reactor, and logging dependencies are packaged together under private `ghidrassistmcp.internal.*` names, avoiding collisions with Ghidra's older JSON/logging libraries and other extensions. A subprocess regression loads the distributed jar after the original host libraries and exercises HTTP discovery and tool calls.
+The server uses Java SDK 2.2.0's stateless (`modern`) server for MCP `2026-07-28` at `/mcp`. The dependency build excludes historical copies from generated `lib/`. The selected SDK, Jackson, schema validator, Jetty, Servlet, Reactor, and logging dependencies are packaged together under private `ghidrassistmcp.internal.*` names, avoiding collisions with Ghidra's older JSON/logging libraries and other extensions. A subprocess regression loads the distributed jar after the original host libraries and exercises HTTP discovery and tool calls.
 
 The HTTP container moves to the supported Jetty 12.1 line with EE11 servlet support. Jetty 11 has reached end of life; see [Jetty support](https://jetty.org/support.html) and the [Jetty 12.1 documentation](https://jetty.org/docs/jetty/12.1/index.html).
 
-The stable Java SDK implements MCP `2025-11-25`. The latest specification is `2026-07-28`, which introduces stateless self-contained requests and per-request negotiation. The Java SDK roadmap assigns that revision to its next major line. This implementation does not claim support for that protocol revision. See the [MCP specification](https://modelcontextprotocol.io/specification/2026-07-28) and [Java SDK roadmap](https://github.com/modelcontextprotocol/java-sdk/blob/main/ROADMAP.md).
+MCP `2026-07-28` makes every request self-contained: `_meta` carries the protocol version and client capabilities, and `server/discover` replaces the `initialize` handshake. SDK 2.2.0 implements it as a separate server that refuses initialization-based revisions, so this release drops support for clients on `2025-11-25` and earlier, together with the legacy SSE endpoints `/sse` and `/message`. Such clients receive error `-32022` naming the supported version. See the [MCP specification](https://modelcontextprotocol.io/specification/2026-07-28).
+
+The backend still exchanges the SDK's classic `spec.McpSchema` types, which 2.2.0 retains but deprecates. `GhidrAssistMCPServer` converts them to the modern records at the protocol boundary through their shared JSON form. Its tool, prompt, and resource repositories read the backend on every request, so catalog changes need no server rebuild; tool-setting changes are also broadcast as `notifications/tools/list_changed` to `subscriptions/listen` streams. The SDK's own origin validator is disabled because the Jetty origin filter remains the single authority. SDK 2.2.0 depends on Reactor `3.9.0-RC1`, a release candidate.
 
 Input schemas are validated before execution. Reads and edits have separate annotations, selectors hidden by the catalog cannot be overridden, and missing required fields fail visibly. Operation failures set `isError`. Adding context preserves the result's structured content, metadata, error flag, and non-text content. JSON result text can also populate structured content; legacy human-readable results retain their existing presentation.
 
@@ -146,28 +148,29 @@ GhidrAssist and GhidrAssistHL discover tool definitions dynamically, so their cl
 2. Convert collection results to typed records with stable cursor pagination, `truncated`, and `next_cursor` fields. This is especially useful for strings, references, large functions, and structure-field searches.
 3. Add `get_current_context` to atomically return the program, browser, function, cursor, and selection. Add `navigate_to_address` as a clear UI navigation operation.
 4. Add explicit `save_program` and dirty-state inspection so annotation changes have predictable persistence before a client closes a program.
-5. Adopt native MCP Tasks/progress where client capabilities support them, retaining the application job API for older clients.
-6. Move to the Java SDK line implementing `2026-07-28` when supported, with protocol-version integration tests and a client compatibility matrix. Keep all Ghidra operations behind the existing backend boundary.
+5. Implement the MCP Tasks extension as an SDK `McpFeature` backed by `McpTaskManager`. SDK 2.2.0 provides the extension point but no Tasks implementation. Keep the application job API until clients adopt it.
+6. Migrate the backend from the deprecated classic `spec.McpSchema` types to the modern records, removing the boundary conversion. Build a client compatibility matrix for `2026-07-28`.
 7. Evaluate catalog selection against the previous names using a fixed benign fixture and natural-language tasks such as “show the pseudocode,” “list callers,” and “change a local variable type.” Measure first-call selection, argument validity, and successful completion. Naming quality is a design choice here, not a measured model-performance claim.
 8. Normalize masked byte-pattern wildcard syntax with `search_bytes`: the preserved signature format uses single `?` tokens, while byte search expects `??` or `**`. Add unambiguous variable/function identities for mutations rather than relying on duplicate display names.
 9. Bring the three MCP companions into alignment through a shared contract table and matching fixture tests, including host-specific deviations.
 
 ## Validation
 
-Automated tests cover catalog contracts, project-tool path/argument validation and controller dispatch, project creation/opening policies, checked file and metadata saves, partial-save failures, unsaved/busy close guards, lifecycle exclusion and cancellation cleanup, real Streamable HTTP and legacy SSE initialization/discovery/calls with no program loaded, dynamic tool availability, program selection, result preservation, cache identity, bounded shared logging, function hashing, and task consumer cleanup. The packaged subprocess also checks that the SDK/JSON/HTTP classes originate from the private runtime jar, both with Ghidra 12.0's older shared Jackson loaded first and with Ghidra 12.1's host libraries.
+Automated tests cover catalog contracts, project-tool path/argument validation and controller dispatch, project creation/opening policies, checked file and metadata saves, partial-save failures, unsaved/busy close guards, lifecycle exclusion and cancellation cleanup, real stateless HTTP discovery/calls with no program loaded, legacy-client rejection, list-changed delivery over `subscriptions/listen`, dynamic tool availability, program selection, result preservation, cache identity, bounded shared logging, function hashing, and task consumer cleanup. The packaged subprocess also checks that the SDK/JSON/HTTP classes originate from the private runtime jar, both with Ghidra 12.0's older shared Jackson loaded first and with Ghidra 12.1's host libraries.
 
 | Check | Result |
 | --- | --- |
 | Ghidra 12.0 `buildExtension test` | 90 tests passed; version-specific ZIP built |
 | Ghidra 12.1 `buildExtension test` | 90 tests passed; version-specific ZIP built |
-| Streamable HTTP and legacy SSE | Initialization and explicit discovery passed without a program |
+| Ghidra 12.2 `buildExtension test` (SDK 2.2.0, MCP `2026-07-28`) | 184 tests passed; version-specific ZIP built |
+| Stateless HTTP | Discovery, tool calls, prompts, resources, progress, and list-changed notifications passed without a program; legacy `initialize` rejected |
 | Runtime isolation | Packaged server passed against each host classpath; ZIP contains one private jar and no Ghidra classes |
 | Package hygiene | Local analysis databases, editor settings, Lucene state, and unused language skeleton files excluded |
 | Project lifecycle HTTP errors | Missing GUI ownership returns tool errors without stopping the server |
 | Diff whitespace check | Passed |
 | Live Ghidra 12.1 startup and multiple CodeBrowser views | Passed through the connected MCP server; matching logs confirmed in both windows |
 
-Builds used Java 25.0.4.1 and Gradle 9.6.1. The installed Ghidra libraries were not changed.
+The 12.0 and 12.1 rows predate the SDK 2.2.0 migration, which was validated on Ghidra 12.2 with Java 25.0.5. Earlier builds used Java 25.0.4.1 and Gradle 9.6.1. The installed Ghidra libraries were not changed.
 
 The four project-control tools were added after the live smoke test below and have not yet been exercised against the installed GUI. Remaining GUI acceptance should cover their create/open/save/close round trip, both a fresh and an existing saved profile, shared configuration edits, and shutdown with a running task. The broader acceptance sequence is: connect before opening CodeBrowser, list project files, open a program, open a second CodeBrowser, compare logs and configuration, close the first and then all browsers, close/reopen the project, and shut down with a running task. The server should remain reachable until the application closes or the user disables it.
 

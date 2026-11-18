@@ -9,6 +9,12 @@ import java.time.Duration;
 
 /** No SDK imports: all calls target the actual relocated classes in the packaged jar. */
 public final class PackagedRuntimeSmoke {
+    // Stateless MCP 2026-07-28: every request names its revision and client capabilities.
+    private static final String META = "\"_meta\":{"
+        + "\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+        + "\"io.modelcontextprotocol/clientCapabilities\":{},"
+        + "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"packaged-smoke\",\"version\":\"1\"}}";
+
     public static void main(String[] arguments) throws Exception {
         // Force the host's shared Jackson classes to load before any extension classes.
         try {
@@ -25,6 +31,7 @@ public final class PackagedRuntimeSmoke {
             "ghidrassistmcp.internal.jackson2.core.JsonParser",
             "ghidrassistmcp.internal.jackson2.databind.ObjectMapper",
             "ghidrassistmcp.internal.mcp.spec.McpSchema",
+            "ghidrassistmcp.internal.mcp.modern.server.McpServer",
             "ghidrassistmcp.internal.networknt.schema.SchemaRegistry",
             "ghidrassistmcp.internal.jetty.server.Server",
             "ghidrassistmcp.internal.slf4j.Logger",
@@ -47,23 +54,17 @@ public final class PackagedRuntimeSmoke {
             int port = (Integer) serverClass.getMethod("getBoundPort").invoke(server);
             URI endpoint = URI.create("http://127.0.0.1:" + port + "/mcp");
             HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-            HttpResponse<String> initialized = send(client, endpoint, null,
-                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{"
-                + "\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},"
-                + "\"clientInfo\":{\"name\":\"packaged-smoke\",\"version\":\"1\"}}}");
-            require(initialized.statusCode() == 200, initialized.body());
-            require(compact(initialized.body()).contains("\"protocolVersion\":\"2025-11-25\""), initialized.body());
-            String session = initialized.headers().firstValue("Mcp-Session-Id").orElse(null);
-            HttpResponse<String> ready = send(client, endpoint, session,
-                "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
-            require(ready.statusCode() == 200 || ready.statusCode() == 202, ready.body());
-            HttpResponse<String> tools = send(client, endpoint, session,
-                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}");
+            HttpResponse<String> discovered = send(client, endpoint, "server/discover", null,
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\",\"params\":{" + META + "}}");
+            require(discovered.statusCode() == 200, discovered.body());
+            require(compact(discovered.body()).contains("\"supportedVersions\":[\"2026-07-28\"]"), discovered.body());
+            HttpResponse<String> tools = send(client, endpoint, "tools/list", null,
+                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{" + META + "}}");
             require(tools.statusCode() == 200, tools.body());
             require(tools.body().contains("get_pseudocode") && tools.body().contains("get_function_hash"), tools.body());
-            HttpResponse<String> result = send(client, endpoint, session,
-                "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\","
-                + "\"params\":{\"name\":\"get_pseudocode\",\"arguments\":{\"function\":\"example\"}}}");
+            HttpResponse<String> result = send(client, endpoint, "tools/call", "get_pseudocode",
+                "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{"
+                + "\"name\":\"get_pseudocode\",\"arguments\":{\"function\":\"example\"}," + META + "}}");
             require(result.statusCode() == 200 && compact(result.body()).contains("\"isError\":true"), result.body());
             System.out.println("PACKAGED_RUNTIME_OK");
         } finally {
@@ -75,14 +76,15 @@ public final class PackagedRuntimeSmoke {
         }
     }
 
-    private static HttpResponse<String> send(HttpClient client, URI endpoint, String session, String body)
-            throws Exception {
+    private static HttpResponse<String> send(HttpClient client, URI endpoint, String method, String name,
+            String body) throws Exception {
         HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
             .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json")
             .header("Accept", "application/json, text/event-stream")
-            .header("MCP-Protocol-Version", "2025-11-25");
-        if (session != null) {
-            request.header("Mcp-Session-Id", session);
+            .header("Mcp-Method", method)
+            .header("MCP-Protocol-Version", "2026-07-28");
+        if (name != null) {
+            request.header("Mcp-Name", name);
         }
         return client.send(request.POST(HttpRequest.BodyPublishers.ofString(body)).build(),
             HttpResponse.BodyHandlers.ofString());

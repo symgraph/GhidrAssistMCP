@@ -26,9 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,20 +40,17 @@ import ghidra.program.model.symbol.SymbolTable;
 import ghidra.util.task.TaskMonitor;
 import io.modelcontextprotocol.spec.McpSchema;
 
-/** SDK-native progress over both HTTP transports, without opening a Ghidra database. */
+/** SDK-native progress over the stateless HTTP transport, without opening a Ghidra database. */
 @Timeout(40)
 class NativeProgressIntegrationTest {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int STEPS = 3;
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
-    enum Transport { STREAMABLE_HTTP, LEGACY_SSE }
-
-    @ParameterizedTest
-    @EnumSource(Transport.class)
-    void progressKeepsTokenTypesAndFullResultsOnInitialAndRefreshedTools(Transport transport)
+    @Test
+    void progressKeepsTokenTypesAndFullResultsOnInitialAndRefreshedTools()
             throws Exception {
-        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect(transport)) {
+        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect()) {
             fixture.addProbe("refreshed_probe");
             for (int index = 0; index < 2; index++) {
                 Object token = index == 0 ? "source-progress" : 0;
@@ -83,7 +79,7 @@ class NativeProgressIntegrationTest {
                 // were still open, so coalescing cannot hide an unwanted late event.
                 run.monitor.setMaximum(STEPS + 1);
                 run.monitor.setProgress(STEPS + 1);
-                wire.fence("after-" + id);
+                wire.drain();
                 assertEquals(List.of(response), wire.responses(id));
                 assertProgress(wire, token, response);
             }
@@ -93,11 +89,10 @@ class NativeProgressIntegrationTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(Transport.class)
-    void noProgressTokenReturnsFullInFlightResultWithoutJobsOrNotifications(Transport transport)
+    @Test
+    void noProgressTokenReturnsFullInFlightResultWithoutJobsOrNotifications()
             throws Exception {
-        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect(transport)) {
+        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect()) {
             assertTrue(fixture.backend.isAsyncExecutionEnabled(), "This must exercise the normal job-enabled configuration");
             Run run = fixture.run("untokened-work");
             wire.call("untokened-call", "monitored_probe", run.name, null);
@@ -116,7 +111,7 @@ class NativeProgressIntegrationTest {
             assertFullResult(response, run.name);
             await(run.closed, "The in-flight operation did not close its native resource");
             awaitNoConsumers(fixture);
-            wire.fence("after-untokened-work");
+            wire.drain();
             assertEquals(List.of(response), wire.responses("untokened-call"));
             assertTrue(wire.allProgress().isEmpty(), "A call without a progress token must emit no progress");
             assertTrue(fixture.backend.getTaskManager().listTasks(null).isEmpty());
@@ -126,11 +121,10 @@ class NativeProgressIntegrationTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(Transport.class)
-    void canonicalAnalyzeProgramReportsProgressWithoutChangingItsHeadlessFailure(Transport transport)
+    @Test
+    void canonicalAnalyzeProgramReportsProgressWithoutChangingItsHeadlessFailure()
             throws Exception {
-        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect(transport)) {
+        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect()) {
             Map<String, Object> arguments = Map.of("options", Map.of("fixture", true));
             fixture.backend.setAsyncExecutionEnabled(false);
             McpSchema.CallToolResult baseline = fixture.backend.callTool("analyze_program", arguments);
@@ -151,10 +145,10 @@ class NativeProgressIntegrationTest {
 
             fixture.analysisRelease.countDown();
             JsonNode response = wire.response("canonical-analysis");
-            assertEquals(JSON.valueToTree(baseline), response.path("result"),
+            assertEquals(JSON.valueToTree(baseline), ModernMcpRequests.withoutProtocolFields(response.path("result")),
                 "Adding progress must preserve the canonical tool's original result");
             awaitNoConsumers(fixture);
-            wire.fence("after-canonical-analysis");
+            wire.drain();
             assertProgress(wire, "analysis-progress", response, 100);
             assertEquals(priorAdds + 2, fixture.adds.get());
             assertEquals(fixture.adds.get(), fixture.releases.get());
@@ -164,10 +158,9 @@ class NativeProgressIntegrationTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(Transport.class)
-    void canonicalRenameBatchPreservesDeferredFailureReportWithAndWithoutTokens(Transport transport) throws Exception {
-        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect(transport)) {
+    @Test
+    void canonicalRenameBatchPreservesDeferredFailureReportWithAndWithoutTokens() throws Exception {
+        try (Fixture fixture = new Fixture(); WireClient wire = fixture.connect()) {
             List<Map<String, Object>> requests = List.of(
                 Map.of("target_type", "variable", "identifier", "missingVariables", "variable_name", "first", "new_name", "renamedFirst"),
                 Map.of("target_type", "function", "identifier", "", "new_name", "ignored"),
@@ -193,8 +186,9 @@ class NativeProgressIntegrationTest {
 
             // Tokenless requests return the same full report without progress notifications.
             wire.toolCall("untokened-rename", "rename_symbols_batch", arguments, null);
-            assertEquals(baselineJson, wire.response("untokened-rename").path("result"));
-            wire.fence("after-untokened-rename");
+            assertEquals(baselineJson, ModernMcpRequests.withoutProtocolFields(
+                wire.response("untokened-rename").path("result")));
+            wire.drain();
             assertTrue(wire.allProgress().isEmpty());
             assertTrue(fixture.backend.getTaskManager().listTasks(null).isEmpty());
 
@@ -217,10 +211,11 @@ class NativeProgressIntegrationTest {
 
                 fixture.renameRelease.countDown();
                 JsonNode response = wire.response(id);
-                assertEquals(baselineJson, response.path("result"), "Progress must not change any per-item outcome or order");
+                assertEquals(baselineJson, ModernMcpRequests.withoutProtocolFields(response.path("result")),
+                    "Progress must not change any per-item outcome or order");
                 assertEquals(report, renameReport(response.path("result")));
                 awaitNoConsumers(fixture);
-                wire.fence("after-" + id);
+                wire.drain();
                 assertProgress(wire, token, response, 100);
                 assertEquals(List.of(response), wire.responses(id));
                 assertTrue(fixture.backend.getTaskManager().listTasks(null).isEmpty());
@@ -390,8 +385,8 @@ class NativeProgressIntegrationTest {
 
         Run run(String name) { Run run = new Run(name); runs.put(name, run); return run; }
         int activeConsumers() { return adds.get() - releases.get(); }
-        WireClient connect(Transport transport) throws Exception {
-            return new WireClient(URI.create("http://127.0.0.1:" + server.getBoundPort()), transport);
+        WireClient connect() {
+            return new WireClient(URI.create("http://127.0.0.1:" + server.getBoundPort() + "/mcp"));
         }
         void addProbe(String toolName) {
             backend.registerTool(new McpTool() {
@@ -447,9 +442,8 @@ class NativeProgressIntegrationTest {
         return new McpSchema.JsonSchema("object", Map.of(), List.of(), false, null, null);
     }
 
-    /** Preserve every notification and response instead of selecting the last SSE data event. */
+    /** Preserve every notification and response from each request's own response stream. */
     private static final class WireClient implements AutoCloseable {
-        final Transport transport;
         final HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
         final ExecutorService readers = Executors.newCachedThreadPool(runnable -> {
             Thread thread = new Thread(runnable, "native-progress-wire-reader");
@@ -462,26 +456,9 @@ class NativeProgressIntegrationTest {
         final List<CompletableFuture<?>> requests = new CopyOnWriteArrayList<>();
         final URI endpoint;
         volatile Throwable readerError;
-        volatile String session;
 
-        WireClient(URI origin, Transport transport) throws Exception {
-            this.transport = transport;
-            if (transport == Transport.LEGACY_SSE) {
-                HttpResponse<InputStream> connected = client.send(HttpRequest.newBuilder(origin.resolve("/sse"))
-                    .timeout(TIMEOUT).header("Accept", "text/event-stream").GET().build(),
-                    HttpResponse.BodyHandlers.ofInputStream());
-                assertEquals(200, connected.statusCode());
-                streams.add(connected.body());
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connected.body(), StandardCharsets.UTF_8));
-                String address = readers.submit(() -> readData(reader)).get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-                endpoint = origin.resolve(address);
-                readers.execute(() -> pump(reader));
-            } else endpoint = origin.resolve("/mcp");
-            send(message("initialize", "init", Map.of("protocolVersion",
-                transport == Transport.LEGACY_SSE ? "2024-11-05" : "2025-11-25",
-                "capabilities", Map.of(), "clientInfo", Map.of("name", "native-progress-test", "version", "1.0"))));
-            assertFalse(response("init").has("error"));
-            notify("notifications/initialized", Map.of());
+        WireClient(URI endpoint) {
+            this.endpoint = endpoint;
         }
 
         void call(Object id, String tool, String run, Object token) throws Exception {
@@ -492,15 +469,13 @@ class NativeProgressIntegrationTest {
             params.put("name", tool);
             params.put("arguments", arguments);
             if (token != null) params.put("_meta", Map.of("progressToken", token));
-            send(message("tools/call", id, params));
+            send(ModernMcpRequests.message(id, "tools/call", params));
         }
-        void fence(String id) throws Exception {
-            send(message("ping", id, Map.of()));
-            response(id);
-            // An SSE response can precede its POST's HTTP acknowledgement. Join
-            // the acknowledgements too, including any status/transport failures.
+        /** Every response stream ends with its result, so a fully read stream can carry nothing later. */
+        void drain() throws Exception {
             CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new))
                 .get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            if (readerError != null) throw new AssertionError("Wire reader failed", readerError);
         }
         void awaitProgress(Object token, int progress) throws Exception {
             awaitMessage(message -> isProgress(message, token) &&
@@ -530,67 +505,28 @@ class NativeProgressIntegrationTest {
             return "notifications/progress".equals(message.path("method").asText()) &&
                 message.path("params").path("progressToken").equals(JSON.valueToTree(token));
         }
-        private static Map<String, Object> message(String method, Object id, Map<String, ?> params) {
-            Map<String, Object> message = new LinkedHashMap<>();
-            message.put("jsonrpc", "2.0");
-            if (id != null) message.put("id", id);
-            message.put("method", method);
-            message.put("params", params);
-            return message;
-        }
-        private HttpRequest request(Map<String, ?> message) throws Exception {
-            HttpRequest.Builder request = HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(30))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json, text/event-stream")
-                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(message)));
-            if (transport == Transport.STREAMABLE_HTTP) {
-                request.header("MCP-Protocol-Version", "2025-11-25");
-                if (session != null) request.header("Mcp-Session-Id", session);
-            }
-            return request.build();
-        }
-        private void notify(String method, Map<String, ?> params) throws Exception {
-            HttpResponse<String> accepted = client.send(request(message(method, null, params)),
-                HttpResponse.BodyHandlers.ofString());
-            assertTrue(accepted.statusCode() == 200 || accepted.statusCode() == 202, accepted.body());
-        }
-        private void send(Map<String, ?> message) throws Exception {
-            if (transport == Transport.LEGACY_SSE) {
-                // A foreground tool can keep this POST open while progress flows
-                // on the separate SSE connection. Do not block the latch owner.
-                CompletableFuture<Void> pending = client.sendAsync(request(message), HttpResponse.BodyHandlers.ofString())
-                    .thenAccept(accepted -> assertTrue(accepted.statusCode() == 200 || accepted.statusCode() == 202,
-                        accepted.body()))
-                    .whenComplete((ignored, failure) -> {
-                        if (failure != null) readerError = failure;
-                    });
-                requests.add(pending);
-                return;
-            }
-            CompletableFuture<Void> pending = client.sendAsync(request(message), HttpResponse.BodyHandlers.ofInputStream())
-                .thenAccept(response -> {
-                    if (response.statusCode() != 200) {
-                        readerError = new AssertionError("Unexpected HTTP status: " + response.statusCode());
-                        return;
-                    }
-                    response.headers().firstValue("Mcp-Session-Id").ifPresent(value -> session = value);
+        private void send(Map<String, Object> message) throws Exception {
+            CompletableFuture<Void> pending = client.sendAsync(
+                    ModernMcpRequests.request(endpoint, message, Duration.ofSeconds(30)),
+                    HttpResponse.BodyHandlers.ofInputStream())
+                .thenAcceptAsync(response -> {
                     streams.add(response.body());
-                    readers.execute(() -> {
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8));
-                        if (response.headers().firstValue("Content-Type").orElse("").startsWith("text/event-stream")) {
-                            pump(reader);
-                        } else {
-                            try { record(JSON.readTree(reader)); }
-                            catch (Exception failure) { readerError = failure; }
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8));
+                    try {
+                        if (response.statusCode() != 200) {
+                            throw new AssertionError("Unexpected HTTP status: " + response.statusCode());
                         }
-                    });
-                }).exceptionally(failure -> { readerError = failure; return null; });
+                        if (response.headers().firstValue("Content-Type").orElse("").startsWith("text/event-stream")) {
+                            for (String data; (data = readData(reader)) != null;) record(JSON.readTree(data));
+                        } else {
+                            record(JSON.readTree(reader));
+                        }
+                    } catch (Throwable failure) {
+                        readerError = failure;
+                    }
+                }, readers)
+                .exceptionally(failure -> { readerError = failure; return null; });
             requests.add(pending);
-        }
-        private void pump(BufferedReader reader) {
-            try {
-                for (String data; (data = readData(reader)) != null;) record(JSON.readTree(data));
-            } catch (Exception failure) { readerError = failure; }
         }
         private static String readData(BufferedReader reader) throws Exception {
             StringBuilder data = new StringBuilder();

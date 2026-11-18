@@ -115,8 +115,8 @@ repositories {
 
 dependencies {
 	// Select the Jackson 2 module explicitly; the SDK aggregate defaults to Jackson 3.
-	implementation 'io.modelcontextprotocol.sdk:mcp-core:2.0.1'
-	implementation 'io.modelcontextprotocol.sdk:mcp-json-jackson2:2.0.1'
+	implementation 'io.modelcontextprotocol.sdk:mcp-core:2.2.0'
+	implementation 'io.modelcontextprotocol.sdk:mcp-json-jackson2:2.2.0'
 	
 	// Jetty embedded server for servlet container
 	implementation 'org.eclipse.jetty:jetty-server:12.1.14'
